@@ -17,7 +17,7 @@ SessionDep = Annotated[Session, Depends(get_session)]
     "/",
     response_model=UserRead,
     status_code=status.HTTP_201_CREATED,
-    #dependencies=[Depends(require_role(UserRole.OPS_MANAGER))]
+    dependencies=[Depends(require_role(UserRole.OPS_MANAGER))]
 )
 def create_user(user_create: UserCreate, session: SessionDep) -> User:
     """
