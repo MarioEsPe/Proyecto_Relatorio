@@ -9,7 +9,7 @@ from app.enums import LicenseStatus
 from app.models import License, User
 from app.schemas import LicenseRead, LicenseCreate, LicenseClose
 from app.routers.login import get_current_user
-
+from app.dependencies import require_role, UserRole
 
 router = APIRouter(
     prefix="/licenses",
@@ -18,7 +18,7 @@ router = APIRouter(
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
-@router.post("/", response_model=LicenseRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=LicenseRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role([UserRole.SHIFT_SUPERINTENDENT]))])
 def create_license(
     license: LicenseCreate, 
     session: SessionDep,
@@ -35,8 +35,6 @@ def create_license(
     session.refresh(db_license)
     return db_license
     
-# Read Licenses    
-
 @router.get("/", response_model=List[LicenseRead])
 def read_licenses(
     session: SessionDep,
@@ -50,8 +48,6 @@ def read_licenses(
     licenses = session.exec(query.offset(offset).limit(limit)).all()
     return licenses
 
-# Read One License
-
 @router.get("/{license_id}", response_model=LicenseRead)
 def read_license(license_id: int, session: SessionDep) -> License:
     license = session.get(License, license_id)
@@ -59,7 +55,7 @@ def read_license(license_id: int, session: SessionDep) -> License:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="License not found")
     return license
 
-@router.put("/{license_id}/close", response_model=LicenseRead)
+@router.put("/{license_id}/close", response_model=LicenseRead, dependencies=[Depends(require_role([UserRole.SHIFT_SUPERINTENDENT]))])
 def close_license(
     license_id: int,
     license_data: LicenseClose,

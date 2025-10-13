@@ -26,7 +26,7 @@ def create_scheduled_task(
     current_user: AdminUser
     ):
     """
-    Crea una nueva tarea programada en el catalogo general.
+    Create a new scheduled task in the general catalog.
     """
     db_scheduled_task = ScheduledTask.model_validate(task_data)
     
@@ -44,7 +44,7 @@ def get_all_scheduled_tasks(
     is_active: bool = True
 ):
     """
-    Obtiene una lista de tareas programadas, por defecto solo las activas.
+    Get a list of scheduled tasks; by default, only active ones.
     """
     query = select(ScheduledTask).where(ScheduledTask.is_active == is_active)
         
@@ -59,13 +59,12 @@ def update_scheduled_task(
     current_user: AdminUser
 ):
     """
-    Actualiza una tarea programada existente en el catalogo.
+    Update an existing scheduled task in the catalog.
     """    
     db_scheduled_task = session.get(ScheduledTask, task_id)
     if not db_scheduled_task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ScheduledTask not found")
     
-    # Obtenemos los datos del pydantic model que no son None
     update_data = task_data.model_dump(exclude_unset=True)
     
     for key, value in update_data.items():

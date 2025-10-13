@@ -9,7 +9,7 @@ from app.enums import TicketType, TicketStatus
 from app.models import MaintenanceTicket, User
 from app.schemas import MaintenanceTicketCreate, MaintenanceTicketRead, MaintenanceTicketUpdate
 from app.routers.login import get_current_user
-
+from app.dependencies import require_role, UserRole
 
 router = APIRouter(
     prefix="/maintenance-tickets",
@@ -18,7 +18,7 @@ router = APIRouter(
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
-@router.post("/", response_model=MaintenanceTicketRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=MaintenanceTicketRead, status_code=status.HTTP_201_CREATED,dependencies=[Depends(require_role([UserRole.SHIFT_SUPERINTENDENT]))])
 def create_maintenance_ticket(
     maintenance_ticket: MaintenanceTicketCreate, 
     session: SessionDep,
@@ -34,9 +34,7 @@ def create_maintenance_ticket(
     session.commit()
     session.refresh(db_maintenance_ticket)
     return db_maintenance_ticket
-    
-# Read MaintenanceTickets    
-
+       
 @router.get("/", response_model=list[MaintenanceTicketRead])
 def read_maintenance_tickets(
     session: SessionDep,
@@ -45,8 +43,6 @@ def read_maintenance_tickets(
     maintenance_tickets = session.exec(select(MaintenanceTicket).offset(offset).limit(limit)).all()
     return maintenance_tickets
 
-# Read One Equipment
-
 @router.get("/{maintenance_ticket_id}", response_model=MaintenanceTicketRead)
 def read_maintenance_ticket(maintenance_ticket_id: int, session: SessionDep) -> MaintenanceTicket:
     maintenance_ticket = session.get(MaintenanceTicket, maintenance_ticket_id)
@@ -54,7 +50,7 @@ def read_maintenance_ticket(maintenance_ticket_id: int, session: SessionDep) -> 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="MaintenanceTicket not found")
     return maintenance_ticket
 
-@router.put("/{maintenance_ticket_id}", response_model=MaintenanceTicketRead)
+@router.put("/{maintenance_ticket_id}", response_model=MaintenanceTicketRead, dependencies=[Depends(require_role([UserRole.SHIFT_SUPERINTENDENT]))])
 def update_maintenance_ticket(
     maintenance_ticket_id: int,
     maintenance_ticket_data: MaintenanceTicketUpdate,
@@ -64,13 +60,11 @@ def update_maintenance_ticket(
     if not db_maintenance_ticket:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="MaintenanceTicket not found")
     
-    # Obtenemos los datos del pydantic model que no son None
     update_data = maintenance_ticket_data.model_dump(exclude_unset=True)
     
     if update_data.get("ticket_status") == TicketStatus.COMPLETED:
         db_maintenance_ticket.completed_at = datetime.utcnow()
     
-    # actualizamos el objeto de la base de datos
     for key, value in update_data.items():
         setattr(db_maintenance_ticket, key, value)
         

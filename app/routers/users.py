@@ -21,9 +21,7 @@ SessionDep = Annotated[Session, Depends(get_session)]
 )
 def create_user(user_create: UserCreate, session: SessionDep) -> User:
     """
-    Crea un nuevo usuario en el sistema.
-    Solo permitido para usuarios con el rol 'Jefe de Operación'.
-
+    A new user may be created in the system. This is only authorized for users with the 'Operations Manager' role.
     """
     user_data = user_create.model_dump(exclude={"password"})
     hashed_password = get_password_hash(user_create.password)

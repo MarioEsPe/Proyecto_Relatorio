@@ -1,11 +1,10 @@
 # app/routers/parameters.py
-
 from typing import Annotated, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session, select
 
 from app.database import get_session
-from app.dependencies import require_role
+from app.dependencies import require_role, UserRole
 from app.enums import UserRole
 from app.models import OperationalParameter, User
 from app.schemas import (
@@ -25,7 +24,9 @@ def create_operational_parameter(
     session: SessionDep,
     current_user: AdminUser,
 ):
-    """Crea un nuevo parámetro operativo en el catálogo (Solo Jefes de Operación)."""
+    """
+    Create a new operational parameter in the catalog (Operations Managers Only).    
+    """
     db_parameter = OperationalParameter.model_validate(parameter_data)
     session.add(db_parameter)
     session.commit()
@@ -39,7 +40,9 @@ def get_all_operational_parameters(
     offset: int = 0,
     limit: int = Query(default=100, le=100),
 ):
-    """Obtiene una lista de todos los parámetros operativos definidos."""
+    """
+    Get a list of all defined operational parameters.
+    """
     query = select(OperationalParameter).where(OperationalParameter.is_active == is_active)
     parameters = session.exec(query.offset(offset).limit(limit)).all()
     return parameters
@@ -51,11 +54,13 @@ def update_operational_parameter(
     session: SessionDep,
     current_user: AdminUser,
 ):
-    """Actualiza un parámetro operativo existente (Solo Jefes de Operación)."""
+    """
+    Update an existing operational parameter (Operations Managers Only).
+    """
     db_parameter = session.get(OperationalParameter, parameter_id)
     if not db_parameter:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Parámetro no encontrado"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Parameter not found"
         )
     update_data = parameter_data.model_dump(exclude_unset=True)
     for key, value in update_data.items():

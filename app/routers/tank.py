@@ -16,7 +16,7 @@ router = APIRouter(
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
-# --- Endpoint de Creación Actualizado ---    
+  
 @router.post("/", response_model=TankRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role(UserRole.OPS_MANAGER))])
 def create_tank(tank: TankCreate, session: SessionDep) -> Tank:
     db_tank = Tank.model_validate(tank)
@@ -24,9 +24,7 @@ def create_tank(tank: TankCreate, session: SessionDep) -> Tank:
     session.commit()
     session.refresh(db_tank)
     return db_tank
-    
-# Read Equipments    
-
+        
 @router.get("/", response_model=list[TankRead])
 def read_tanks(
     session: SessionDep,
@@ -35,17 +33,13 @@ def read_tanks(
     tanks = session.exec(select(Tank).offset(offset).limit(limit)).all()
     return tanks
 
-# Read One Tank
-
 @router.get("/{tank_id}", response_model=TankRead)
 def read_tank(tank_id: int, session: SessionDep) -> Tank:
     tank = session.get(Tank, tank_id)
     if not tank:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tank not found")
     return tank 
-
-# Delete a Tank 
-
+ 
 @router.delete("/{tank_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_role(UserRole.OPS_MANAGER))])
 def delete_tank(tank_id: int, session: SessionDep):
     tank = session.get(Tank, tank_id)
@@ -65,10 +59,8 @@ def update_tank(
     if not db_tank:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tank not found")
     
-    # Obtenemos los datos del pydantic model que no son None
     update_data = tank_data.model_dump(exclude_unset=True)
     
-    # actualizamos el objeto de la base de datos
     for key, value in update_data.items():
         setattr(db_tank, key, value)
         

@@ -6,6 +6,7 @@ from sqlmodel import Session, select
 from app.database import get_session
 from app.models import Equipment
 from app.schemas import EquipmentCreate, EquipmentUpdate, EquipmentRead
+from app.dependencies import require_role, UserRole
 
 router = APIRouter(
     prefix="/equipment",
@@ -13,9 +14,8 @@ router = APIRouter(
 )
 
 SessionDep = Annotated[Session, Depends(get_session)]
-
-# --- Endpoint de Creación Actualizado ---    
-@router.post("/", response_model=EquipmentRead, status_code=status.HTTP_201_CREATED)
+    
+@router.post("/", response_model=EquipmentRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role([UserRole.OPS_MANAGER]))])
 def create_equipment(equipment: EquipmentCreate, session: SessionDep) -> Equipment:
     db_equipment = Equipment.model_validate(equipment)
     session.add(db_equipment)
@@ -23,8 +23,6 @@ def create_equipment(equipment: EquipmentCreate, session: SessionDep) -> Equipme
     session.refresh(db_equipment)
     return db_equipment
     
-# Read Equipments    
-
 @router.get("/", response_model=list[EquipmentRead])
 def read_equipments(
     session: SessionDep,
@@ -33,8 +31,6 @@ def read_equipments(
     equipments = session.exec(select(Equipment).offset(offset).limit(limit)).all()
     return equipments
 
-# Read One Equipment
-
 @router.get("/{equipment_id}", response_model=EquipmentRead)
 def read_equipment(equipment_id: int, session: SessionDep) -> Equipment:
     equipment = session.get(Equipment, equipment_id)
@@ -42,9 +38,7 @@ def read_equipment(equipment_id: int, session: SessionDep) -> Equipment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Equipment not found")
     return equipment
 
-# Delete a Equipment
-
-@router.delete("/{equipment_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{equipment_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_role([UserRole.OPS_MANAGER]))])
 def delete_equipment(equipment_id: int, session: SessionDep):
     equipment = session.get(Equipment, equipment_id)
     if not equipment:
@@ -53,7 +47,7 @@ def delete_equipment(equipment_id: int, session: SessionDep):
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-@router.put("/{equipment_id}", response_model=EquipmentRead)
+@router.put("/{equipment_id}", response_model=EquipmentRead, dependencies=[Depends(require_role([UserRole.OPS_MANAGER]))])
 def update_equipment(
     equipment_id: int,
     equipment_data: EquipmentUpdate,
@@ -63,10 +57,8 @@ def update_equipment(
     if not db_equipment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Equipment not found")
     
-    # Obtenemos los datos del pydantic model que no son None
     update_data = equipment_data.model_dump(exclude_unset=True)
     
-    # actualizamos el objeto de la base de datos
     for key, value in update_data.items():
         setattr(db_equipment, key, value)
         

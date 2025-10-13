@@ -5,12 +5,14 @@ from sqlmodel import Session, select
 from app.database import get_session
 from app.models import ShiftAttendance
 from app.schemas import ShiftAttendanceUpdate, ShiftAttendanceReadWithDetails
+from app.dependencies import require_role, UserRole
 
 router = APIRouter(prefix="/attendance", tags=["Attendance"])
 
 @router.patch(
     "/{attendance_id}",
-    response_model=ShiftAttendanceReadWithDetails
+    response_model=ShiftAttendanceReadWithDetails,
+    dependencies=[Depends(require_role([UserRole.OPS_MANAGER, UserRole.SHIFT_SUPERINTENDENT]))]
 )
 def update_attendance_record(
     *,
@@ -19,17 +21,14 @@ def update_attendance_record(
     attendance_in: ShiftAttendanceUpdate
 ):
     """
-    Actualiza un registro de asistencia. Permite cambiar el estado
-    (ej. a "Ausente") y/o asignar un empleado de cobertura.
+    Update an attendance record. Allows changing the status (e.g., to "Absent") and/or assigning a covering employee.
     """
     db_attendance = db.get(ShiftAttendance, attendance_id)
     if not db_attendance:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registro de asistencia no encontrado")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Attendance record not found")
     
-    # Obtiene los datos del Pydantic model que fueron explicitamente enviados
     update_data = attendance_in.model_dump(exclude_unset=True)
     
-    # Actualiza el objeto de la base de datos
     for key, value in update_data.items():
         setattr(db_attendance, key, value)
         
