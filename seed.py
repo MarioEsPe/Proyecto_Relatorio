@@ -1,6 +1,6 @@
 # seed.py
-from sqlmodel import Session
-from sqlalchemy import delete # <-- Importar 'delete'
+from sqlmodel import Session, SQLModel
+from sqlalchemy import delete 
 from app.database import engine
 from app.models import (
     User, Position, Employee, ShiftGroup, Equipment,
@@ -10,10 +10,9 @@ from app.enums import (
     UserRole, EmployeeType, EquipmentStatus, EventType, NoveltyType
 )
 from app.security import get_password_hash
-from datetime import datetime, timedelta, timezone # <-- Importar 'timezone'
+from datetime import datetime, timedelta, timezone 
 
 # --- SAMPLE DATA ---
-# (Sin cambios aquí)
 POSITIONS_DATA = [
     {"name": "Shift Superintendent"}, {"name": "Boiler Operator"},
     {"name": "Turbine Operator"}, {"name": "Operator Assistant"},
@@ -30,11 +29,12 @@ EQUIPMENT_DATA = [
     {"name": "Feedwater Pump 1B", "status": EquipmentStatus.OUT_OF_SERVICE, "unavailability_reason": "Scheduled maintenance"},
 ]
 
-# --- SCRIPT LOGIC ---
 def seed_database():
     print("Starting the seeding process...")
+    
+    SQLModel.metadata.create_all(engine)
+    
     with Session(engine) as session:
-        # --- STEP 1: CLEAR EXISTING DATA (Sintaxis moderna) ---
         print("Clearing the database...")
         session.execute(delete(NoveltyLog))
         session.execute(delete(EventLog))
@@ -46,9 +46,7 @@ def seed_database():
         session.execute(delete(User))
         session.commit()
 
-        # --- STEP 2: CREATE NEW DATA ---
         print("Creating new data...")
-        # (Sin cambios en la lógica de creación, solo en las fechas)
         hashed_password_demo = get_password_hash("demopass123")
         hashed_password_admin = get_password_hash("adminpass123")
         user_demo = User(username="demo_user", rpe="DEMO001", role=UserRole.SHIFT_SUPERINTENDENT, hashed_password=hashed_password_demo)
@@ -63,7 +61,7 @@ def seed_database():
         session.commit()
         
         shift = Shift(
-            start_time=datetime.now(timezone.utc) - timedelta(hours=4), # <-- Corregido
+            start_time=datetime.now(timezone.utc) - timedelta(hours=4), 
             status="OPEN",
             outgoing_superintendent_id=user_admin.id,
             incoming_superintendent_id=user_demo.id,
@@ -72,13 +70,13 @@ def seed_database():
         session.commit()
 
         event = EventLog(
-            timestamp=datetime.now(timezone.utc) - timedelta(hours=2), # <-- Corregido
+            timestamp=datetime.now(timezone.utc) - timedelta(hours=2), 
             description="Unit 1 went out of service due to a high furnace pressure protection trip.",
             event_type=EventType.PROTECTION_TRIP,
             shift_id=shift.id,
         )
         novelty = NoveltyLog(
-            timestamp=datetime.now(timezone.utc) - timedelta(hours=1), # <-- Corregido
+            timestamp=datetime.now(timezone.utc) - timedelta(hours=1), 
             description="Special instruction: Prioritize maintenance for Feedwater Pump 1B.",
             novelty_type=NoveltyType.SPECIAL_INSTRUCTION,
             shift_id=shift.id,
