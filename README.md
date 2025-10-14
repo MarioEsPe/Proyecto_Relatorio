@@ -79,6 +79,16 @@ The API's documentation is auto-generated and interactive. Once the application 
 - **Swagger UI:** `http://127.0.0.1:8000/docs` to test the endpoints.
 - **ReDoc:** `http://127.0.0.1:8000/redoc` for an alternative documentation view.
 
+## Live Demo
+
+You can test the live API using the interactive documentation. A demo user with read and write permissions is available to explore the features.
+
+- **API Docs:** `https://relatorio-api.onrender.com/docs`
+- **Username:** `demo_user`
+- **Password:** `demopass123`
+
+*Note: The database is periodically reset. Feel free to create, update, or delete records.*
+
 ## Future Enhancements
 
 - **Cloud Deployment:** Package the application for deployment on a platform like Render or Railway.
