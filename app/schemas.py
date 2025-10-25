@@ -156,9 +156,6 @@ class OperationalParameterUpdate(SQLModel):
 """
 
 # 2.1 Shift
-class ShiftCreate(SQLModel):
-    scheduled_group_id: int
-
 class ShiftRead(SQLModel):
     id: int
     start_time: datetime
@@ -171,9 +168,13 @@ class ShiftRead(SQLModel):
 class ShiftReadWithGroup(ShiftRead):
     scheduled_group: ShiftGroupRead | None = None
 
-class ShiftClose(SQLModel):
-    pass 
-      
+class ShiftHandoverRequest(SQLModel):
+    shift_to_close_id: int
+    incoming_superintendent_username: str
+    incoming_superintendent_password: str
+    next_scheduled_group_id: int
+    outgoing_superintendent_password: str
+          
 # 2.2 ShiftAttendance
 class ShiftAttendanceRead(SQLModel):
     id: int

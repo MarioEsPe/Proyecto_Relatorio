@@ -12,54 +12,114 @@ from app.models import (
     GenerationRamp, OperationalReading, OperationalParameter
 )    
 from app.schemas import (
-    ShiftRead, ShiftClose, StatusLogCreate, StatusLogRead, ShiftReadWithDetails, 
-    EventLogCreate, EventLogRead, ShiftCreate, ShiftAttendanceReadWithDetails, 
+    ShiftRead, StatusLogCreate, StatusLogRead, ShiftReadWithDetails, 
+    EventLogCreate, EventLogRead, ShiftAttendanceReadWithDetails, 
     TankReadingRead, TankReadingCreate, TaskLogCreate, TaskLogReadWithDetails,
     NoveltyLogCreate, NoveltyLogReadWithUser, GenerationRampCreate, GenerationRampReadWithUser,
-    OperationalReadingCreate, OperationalReadingReadWithDetails
+    OperationalReadingCreate, OperationalReadingReadWithDetails,
+    ShiftHandoverRequest
 )     
 from app.routers.login import get_current_user
 from app.dependencies import require_role, UserRole
+from app.security import verify_password
 
 router = APIRouter(prefix="/shifts", tags=["Shifts"])
 SessionDep = Annotated[Session, Depends(get_session)]
+CurrentUser = Annotated[User, Depends(get_current_user)]
 
-@router.post("/", response_model = ShiftRead, status_code = status.HTTP_201_CREATED)
-def create_shift(
-    shift_data: ShiftCreate,
-    session: SessionDep,
+@router.post(
+    "/handover",
+    response_model=ShiftRead,
+    summary="Atomic Shift Handover",
+    dependencies= [Depends(require_role([UserRole.SHIFT_SUPERINTENDENT]))]
+)
+def handover_shift(
+    *,
+    session:SessionDep,
+    handover_data: ShiftHandoverRequest,
     current_user: Annotated[User, Depends(get_current_user)]
-) -> Shift:
+):
     """
-    Start a new Shift, associate it with a group, and generate the initial attendance sheet.
+    Performs the atomic shift handover ("digital handshake").
+    
+    1. Validates the credentials of the Outgoing Superintendent (logged in).
+    2. Validates the credentials of the Incoming Superintendent (can be the same user).
+    3. Closes the old shift.
+    4. Opens a new shift for the incoming user and generates their attendance sheet.
+    All in a single transaction.
     """
-    db_group = session.get(ShiftGroup, shift_data.scheduled_group_id)
-    if not db_group:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sheduled Group not found")
-    
-    new_shift = Shift(
-        status="OPEN",
-        outgoing_superintendent_id=current_user.id,
-        scheduled_group_id=db_group.id
-    )
-    session.add(new_shift)
-    session.commit()
-    session.refresh(new_shift)
-    
-    for member in db_group.members:
-        attendance_record = ShiftAttendance(
-            shift_id=new_shift.id,
-            scheduled_employee_id=member.id,
-            actual_employee_id=member.id,
-            attendance_status="Present",
-            position_id=member.base_position_id
+    # 1. Validate Outgoing Superintendent (User A)
+    if not verify_password(handover_data.outgoing_superintendent_password,current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials for outgoing superintendent"
         )
-        session.add(attendance_record)
+    
+    # 2. Validate Incoming Superintendent (User B)    
+    user_b_statement = select(User).where(User.username == handover_data.incoming_superintendent_username)
+    user_b = session.exec(user_b_statement).first()
+    
+    if not user_b or not verify_password(handover_data.incoming_superintendent_password, user_b.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Invalid credentials for incoming superintendent"
+        )
+
+    # 3. Validate the shift-to-close and the new group
+    shift_to_close = session.get(Shift, handover_data.shift_to_close_id)
+    if not shift_to_close:
+        raise HTTPException(status_code=404, detail="Shift to close not found")
+    if shift_to_close.status != "OPEN":
+         raise HTTPException(status_code=400, detail="Shift is already closed")
+         
+    # Ownership check: Only the superintendent who *received* (opened) the shift can hand it over.
+    if shift_to_close.incoming_superintendent_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You are not authorized to hand over this shift")
+    
+    new_group = session.get(ShiftGroup, handover_data.next_scheduled_group_id)
+    if not new_group:
+        raise HTTPException(status_code=404, detail="Scheduled group not found")
+
+    # --- ATOMIC TRANSACTION START ---
+    try:
+        # 4. Close the old shift
+        shift_to_close.end_time = datetime.utcnow()
+        shift_to_close.status = "CLOSED"
+        shift_to_close.outgoing_superintendent_id = current_user.id # User A (Outgoing)
+        session.add(shift_to_close)
+
+        # 5. Create the new shift
+        new_shift = Shift(
+            start_time=shift_to_close.end_time, # New shift starts exactly when the old one ends
+            status="OPEN",
+            incoming_superintendent_id=user_b.id, # User B (Incoming)
+            scheduled_group_id=new_group.id
+        )
+        session.add(new_shift)
+        session.commit() # Commit both changes
         
-    session.commit()
-    session.refresh(new_shift)    
+        # 6. Generate the attendance sheet for the *new* shift
+        session.refresh(new_shift)
+        for member in new_group.members:
+            attendance_record = ShiftAttendance(
+                shift_id=new_shift.id,
+                scheduled_employee_id=member.id,
+                actual_employee_id=member.id,
+                attendance_status="Present",
+                position_id=member.base_position_id
+            )
+            session.add(attendance_record)
+            
+        session.commit()
+        session.refresh(new_shift)
+    
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {e}")
+    # --- TRANSACTION END ---
     
     return new_shift
+            
 
 @router.get("/{shift_id}", response_model=ShiftReadWithDetails)
 def read_shift(shift_id: int, session: SessionDep) -> Shift:
@@ -85,45 +145,23 @@ def read_shift(shift_id: int, session: SessionDep) -> Shift:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift not found")
     return shift
 
-@router.put("/{shift_id}/close", response_model = ShiftRead)
-def close_shift(
-    shift_id: int,
-    session: SessionDep,
-    current_user: Annotated[User, Depends(get_current_user)]
-) -> Shift:
-    """
-    Close an existing shift and associate it with the authenticated user.
-    """
-    shift_to_close = session.get(Shift, shift_id)
-    if not shift_to_close:
-        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail="Shift not found")
-    if shift_to_close.status == "CLOSED":
-        raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST, detail = "Shift is already closed")
-    
-    shift_to_close.end_time = datetime.utcnow()
-    shift_to_close.status = "CLOSED"
-    shift_to_close.incoming_superintendent_id = current_user.id
-    
-    session.add(shift_to_close)
-    session.commit()
-    session.refresh(shift_to_close)
-    
-    return shift_to_close
-
 @router.post("/{shift_id}/equipment-status/", response_model=StatusLogRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role([UserRole.OPS_MANAGER, UserRole.SHIFT_SUPERINTENDENT]))])
 def log_equipment_status_for_shift(
     shift_id: int,
     status_log: StatusLogCreate,
-    session: SessionDep
+    session: SessionDep,
+    current_user: CurrentUser
 ) -> EquipmentStatusLog:
     """
-    Register a new equipmnet status for a specific shift.
+    Register a new equipment status for a specific shift.
     """
     db_shift = session.get(Shift, shift_id)
     if not db_shift:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift not found")
     if db_shift.status != "OPEN":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot add logs to a closed shift")
+    if db_shift.incoming_superintendent_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You are not authorized to log data for this shift")
     
     db_equipment = session.get(Equipment, status_log.equipment_id)
     if not db_equipment:
@@ -143,7 +181,8 @@ def log_equipment_status_for_shift(
 def event_log_for_shift(
     shift_id: int,
     event_data: EventLogCreate,
-    session: SessionDep
+    session: SessionDep,
+    current_user: CurrentUser
 ) -> EventLog:
     """
     Log a new event for a specific shift.
@@ -153,6 +192,8 @@ def event_log_for_shift(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift not found")
     if db_shift.status != "OPEN":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot add logs to a closed shift")
+    if db_shift.incoming_superintendent_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You are not authorized to log data for this shift")
        
     new_event_log_entry = EventLog.model_validate(event_data, update={"shift_id": shift_id})
     
@@ -187,7 +228,7 @@ def create_tank_reading_for_shift(
     shift_id: int,
     tank_reading_data: TankReadingCreate,
     session: SessionDep,
-    current_user: Annotated[User, Depends(get_current_user)]
+    current_user: CurrentUser
 ) -> TankReading:
     """
     Log a new tank level reading for a specific shift.
@@ -197,6 +238,8 @@ def create_tank_reading_for_shift(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift not found")
     if db_shift.status != "OPEN":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot add tank_readings to a closed shift")
+    if db_shift.incoming_superintendent_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You are not authorized to log data for this shift")
     
     db_tank = session.get(Tank, tank_reading_data.tank_id)
     if not db_tank:
@@ -220,7 +263,7 @@ def log_task_for_shift(
     shift_id: int,
     log_data: TaskLogCreate, 
     session: SessionDep,
-    current_user: Annotated[User, Depends(get_current_user)]
+    current_user: CurrentUser
 ):
     """
     Log the completion of a scheduled task for a specific shift.
@@ -230,6 +273,8 @@ def log_task_for_shift(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift not found")
     if db_shift.status != "OPEN":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot add tasks to a closed shift")
+    if db_shift.incoming_superintendent_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You are not authorized to log data for this shift")
     
     db_scheduled_task = session.get(ScheduledTask, log_data.scheduled_task_id)
     if not db_scheduled_task:
@@ -270,7 +315,7 @@ def log_novelty_for_shift(
     shift_id: int,
     novelty_data: NoveltyLogCreate,
     session: SessionDep,
-    current_user: Annotated[User, Depends(get_current_user)]
+    current_user: CurrentUser
 ):
     """
     Record a new update, instruction, or incident for a specific shift.
@@ -280,7 +325,9 @@ def log_novelty_for_shift(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift not found")
     if db_shift.status != "OPEN":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot add novelties to a closed shift")
-
+    if db_shift.incoming_superintendent_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You are not authorized to log data for this shift")
+    
     update_data = {
         "shift_id": shift_id,
         "user_id": current_user.id
@@ -313,7 +360,7 @@ def log_generation_ramp_for_shift(
     shift_id: int,
     ramp_data: GenerationRampCreate,
     session: SessionDep,
-    current_user: Annotated[User, Depends(get_current_user)]
+    current_user: CurrentUser
 ):
     """
     Record a new Generation ramp and automatically calculate its compliance.
@@ -323,7 +370,9 @@ def log_generation_ramp_for_shift(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift not found")
     if db_shift.status != "OPEN":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot add ramps to a closed shift")
-
+    if db_shift.incoming_superintendent_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You are not authorized to log data for this shift")
+    
     time_delta = ramp_data.end_time - ramp_data.start_time
     load_delta = ramp_data.final_load_mw - ramp_data.initial_load_mw
 
@@ -370,7 +419,7 @@ def log_operational_reading_for_shift(
     shift_id: int,
     reading_data: OperationalReadingCreate,
     session: SessionDep,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: CurrentUser
 ):
     """
     Log a new operational parameter reading for a specific shift.
@@ -380,7 +429,9 @@ def log_operational_reading_for_shift(
         raise HTTPException(status_code=404, detail="Shift Not Found")
     if db_shift.status != "OPEN":
         raise HTTPException(status_code=400, detail="Readings cannot be added to a closed shift.")
-
+    if db_shift.incoming_superintendent_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You are not authorized to log data for this shift")
+    
     if not session.get(OperationalParameter, reading_data.parameter_id):
         raise HTTPException(status_code=404, detail="Parameter ID not found")
     if not session.get(Equipment, reading_data.equipment_id):

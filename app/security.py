@@ -6,8 +6,6 @@ from jose import jwt
 from passlib.context import CryptContext
 
 # --- CONFIGURACIÓN DE SEGURIDAD ---
-# En una aplicaciíon real, esta clave debe ser un secreto muy largo y complejo,
-# y debe cargarse desde una variable de entorno, no estar escrita en el código.
 SECRET_KEY = "tu-super-secreto-y-largo-string-aleatorio"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 # El token será válido por 30 minutos
