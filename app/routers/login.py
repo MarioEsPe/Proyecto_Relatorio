@@ -1,6 +1,7 @@
 # app/routers/login.py
 from datetime import timedelta
 from typing import Annotated, Any
+from schemas import UserRead
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
@@ -40,6 +41,14 @@ def get_current_user(
     
     return user 
 
+@router.get("/users/me", response_model=UserRead)
+def read_users_me(
+    current_user: Annotated[User, Depends(get_current_user)]
+):
+    """
+    Get the details of the currently authenticated user.
+    """
+    return current_user
 
 @router.post("/token")
 def login_for_access_token(
