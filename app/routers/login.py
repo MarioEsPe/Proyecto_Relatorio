@@ -1,7 +1,6 @@
 # app/routers/login.py
 from datetime import timedelta
 from typing import Annotated, Any
-from schemas import UserRead
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
@@ -11,7 +10,7 @@ from jose import JWTError, jwt
 from app.database import get_session
 from app.models import User 
 from app.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, verify_password, SECRET_KEY, ALGORITHM
-
+from app.schemas import UserRead
 
 router = APIRouter(tags=["Login"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
