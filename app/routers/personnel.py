@@ -86,3 +86,11 @@ def add_employee_to_group(group_id: int, employee_id: int, session: SessionDep) 
     session.commit()
     session.refresh(db_group)
     return db_group
+
+@router.get("/groups/", response_model=List[ShiftGroupRead])
+def get_all_groups(session: SessionDep, current_user: AuthUser) -> List[ShiftGroup]:
+    """
+    Get a list of all shift groups.
+    """
+    groups = session.exec(select(ShiftGroup)).all()
+    return groups
