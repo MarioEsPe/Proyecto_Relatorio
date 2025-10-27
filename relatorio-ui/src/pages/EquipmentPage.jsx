@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api'; 
 
 import EquipmentFormModal from '../components/EquipmentFormModal';
+import ConfirmationDialog from '../components/ConfirmationDialog';
 
 import {
   Typography,
@@ -17,21 +18,40 @@ import {
   TableHead,
   TableRow,
   Paper, 
-  Button 
+  Button,
+  IconButton 
 } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const fetchEquipment = async () => {
   const { data } = await api.get('/equipment');
   return data;
 };
+
 const createEquipment = async (newEquipment) => {
   const { data } = await api.post('/equipment', newEquipment);
   return data;
 };
 
+const updateEquipment = async (equipmentData) => {
+  const { id, ...dataToUpdate } = equipmentData;
+  const { data } = await api.put(`/equipment/${id}`, dataToUpdate); 
+  return data;
+};
+
+const deleteEquipment = async (equipmentId) => {
+  await api.delete(`/equipment/${equipmentId}`);
+  return equipmentId;
+};
+
 const EquipmentPage = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [equipmentToEdit, setEquipmentToEdit] = useState(null);
+  const [equipmentToDelete, setEquipmentToDelete] = useState(null);
+  
   const queryClient =useQueryClient();
+  
   const { 
     data: equipmentList, 
     isLoading: isLoadingQuery, 
@@ -46,11 +66,25 @@ const EquipmentPage = () => {
     mutationFn: createEquipment,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
-      setIsModalOpen(false);
+      setIsCreateModalOpen(false);
     },
-    onError: (error) => {
-      console.error("Error creating equipment:", error);
-    }
+    // TODO: manejar onError
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: updateEquipment,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      setEquipmentToEdit(null); // Cierra el modal de edición
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteEquipment,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      setEquipmentToDelete(null); // Cierra el modal de confirmación
+    },
   });
 
   if (isLoadingQuery) {
@@ -75,7 +109,7 @@ const EquipmentPage = () => {
         </Typography>
         <Button 
           variant="contained" 
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => setIsCreateModalOpen(true)}
         >
           Add New Equipment
         </Button>
@@ -89,6 +123,7 @@ const EquipmentPage = () => {
               <TableCell>Location</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Reason for Unavailability</TableCell>
+              <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -99,17 +134,53 @@ const EquipmentPage = () => {
                 <TableCell>{equipment.location}</TableCell>
                 <TableCell>{equipment.status}</TableCell>
                 <TableCell>{equipment.unavailability_reason || 'N/A'}</TableCell>
+                <TableCell align="right">
+                  <IconButton 
+                    size="small" 
+                    onClick={() => setEquipmentToEdit(equipment)}
+                    disabled={updateMutation.isLoading}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton 
+                    size="small" 
+                    color="error"
+                    onClick={() => setEquipmentToDelete(equipment)}
+                    disabled={deleteMutation.isLoading}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
+
       <EquipmentFormModal
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
         onSubmit={createMutation.mutate} 
         isLoading={createMutation.isLoading} 
       />
+
+      <EquipmentFormModal
+        open={Boolean(equipmentToEdit)}
+        onClose={() => setEquipmentToEdit(null)}
+        onSubmit={updateMutation.mutate}
+        isLoading={updateMutation.isLoading}
+        initialData={equipmentToEdit}
+      />
+
+      <ConfirmationDialog
+        open={Boolean(equipmentToDelete)}
+        onClose={() => setEquipmentToDelete(null)}
+        onConfirm={() => deleteMutation.mutate(equipmentToDelete.id)}
+        title="Delete Equipment"
+        description={`Are you sure you want to delete "${equipmentToDelete?.name}"? This action cannot be undone.`}
+        isLoading={deleteMutation.isLoading}
+      />      
+
     </Box>
   );
 };
