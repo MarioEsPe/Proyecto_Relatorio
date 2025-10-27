@@ -1,49 +1,58 @@
+// relatorio-ui/src/App.jsx
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 
-// Import our pages and components
+// Importar componentes y páginas
 import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
+import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import EquipmentPage from './pages/EquipmentPage';
+import PersonnelPage from './pages/PersonnelPage';
+import ActiveShiftPage from './pages/ActiveShiftPage';
 
 function App() {
-  // Get the global loading state from the store
   const isLoading = useAuthStore((state) => state.isLoading);
 
-  // 1. Show a global loader while 'checkAuth' is running
   if (isLoading) {
     return (
       <div>
         <h2>Loading Application...</h2>
-        {/* En el futuro, esto será un componente <Spinner /> de Material-UI */}
       </div>
     );
   }
 
-  // 2. Once loading is false, render the main router
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Route: /login */}
+        {/* --- Rutas Públicas --- */}
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Protected Route: / (Dashboard) */}
+        {/* --- Rutas Protegidas (envueltas por MainLayout) --- */}
         <Route
           path="/"
           element={
             <ProtectedRoute>
-              <DashboardPage />
+              <MainLayout />
             </ProtectedRoute>
           }
-        />
-        
-        {/* Aquí añadiremos más rutas protegidas en el futuro:
-          <Route 
-            path="/equipment" 
-            element={<ProtectedRoute><EquipmentPage /></ProtectedRoute>} 
-          />
-        */}
+        >
+          {/* Esta es la ruta "raíz" protegida. 
+            Redirige a la página principal por defecto.
+            Usamos <Navigate /> para enviar al usuario a la página inicial.
+          */}
+          <Route index element={<Navigate to="/active-shift" replace />} />
+
+          {/* Rutas para SHIFT_SUPERINTENDENT */}
+          <Route path="active-shift" element={<ActiveShiftPage />} />
+
+          {/* Rutas para OPS_MANAGER */}
+          <Route path="equipment" element={<EquipmentPage />} />
+          <Route path="personnel" element={<PersonnelPage />} />
+          
+          {/* TODO: Añadir protección de rol más granular si es necesario */}
+
+        </Route>
 
       </Routes>
     </BrowserRouter>

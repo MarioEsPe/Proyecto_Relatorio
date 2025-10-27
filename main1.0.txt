@@ -1,0 +1,72 @@
+from typing import Annotated
+
+from fastapi import Depends, FastAPI, HTTPException, Query
+from sqlmodel import Field, Session, SQLModel, create_engine, select
+
+class Equipment(SQLModel, table=True)
+    id int  None = Field(default=None, primary_key=True)
+    name str= Field(index=True)
+    description str
+    is_active bool
+    
+sqlite_file_name =  database.db
+sqlite_url = fsqlite{sqlite_file_name}
+
+connect_args = {check_same_thread False}
+engine = create_engine(sqlite_url, connect_args = connect_args)  
+
+def create_db_and_tables()
+    SQLModel.metadata.create_all(engine) 
+    
+def get_session()
+    with Session(engine) as session 
+        yield session
+        
+SessionDep = Annotated[Session, Depends(get_session)] 
+
+# Create Database Tables on Startup
+
+app = FastAPI()
+
+@app.on_event(startup)
+def on_startup()
+    create_db_and_tables()
+    
+# Create a Equipment    
+@app.post(equipment)
+def create_equipment(equipment Equipment, session SessionDep) - Equipment
+    session.add(equipment)
+    session.commit()
+    session.refresh(equipment)
+    return equipment
+    
+# Read Equipments    
+
+@app.get(equipments)
+def read_equipments(
+    session SessionDep,
+    offset int = 0,
+    limit Annotated[int, Query(le=100)] = 100,
+) - list[Equipment]
+    equipments = session.exec(select(Equipment).offset(offset).limit(limit)).all()
+    return equipments
+
+# Read One Equipment
+
+@app.get(equipments{equipment_id})
+def read_equipment(equipment_id int, session SessionDep) - Equipment
+    equipment = session.get(Equipment, equipment_id)
+    if not equipment
+        raise HTTPException(status_code=404, detail=Equipment not found)
+    return equipment
+
+# Delete a Equipment
+
+@app.delete(equipments{equipment_id})
+def delete_equipment(equipment_id int, session SessionDep)
+    equipment = session.get(Equipment, equipment_id)
+    if not equipment
+        raise HTTPException(status_code=404, detail= Equipment not found)
+    session.delete(equipment)
+    session.commit()
+    return {ok True}
