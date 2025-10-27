@@ -9,14 +9,10 @@ import {
   Tab
 } from '@mui/material';
 
-// Importaremos estos paneles en el siguiente paso
-// import EmployeesPanel from '../components/EmployeesPanel';
-// import GroupsPanel from '../components/GroupsPanel';
-
-// Por ahora, solo importamos el que vamos a crear
 import PositionsPanel from '../components/PositionsPanel';
+import EmployeesPanel from '../components/EmployeesPanel';  
 
-// Componente helper para el contenido de las pestañas
+
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
 
@@ -61,12 +57,10 @@ const PersonnelPage = () => {
 
       {/* --- Contenido de las Pestañas --- */}
       <TabPanel value={currentTab} index={0}>
-        {/* Aquí irá nuestro nuevo componente CRUD */}
         <PositionsPanel />
       </TabPanel>
       <TabPanel value={currentTab} index={1}>
-        <Typography>Employees Management (Coming Soon)</Typography>
-        {/* <EmployeesPanel /> */}
+        <EmployeesPanel />
       </TabPanel>
       <TabPanel value={currentTab} index={2}>
         <Typography>Shift Groups Management (Coming Soon)</Typography>
