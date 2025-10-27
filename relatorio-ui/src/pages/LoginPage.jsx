@@ -9,9 +9,9 @@ import {
   Box, 
   Typography, 
   TextField, 
-  Alert 
+  Alert, 
+  Button 
 } from '@mui/material';
-import { LoadingButton } from '@mui/lab'; // We need this for the loading state
 
 const LoginPage = () => {
   // --- 1. Local State for the Form ---
@@ -20,12 +20,10 @@ const LoginPage = () => {
 
   // --- 2. State from Zustand Store ---
   // We select the pieces of state and actions we need
-  const { login, token, isLoading, error } = useAuthStore((state) => ({
-    login: state.login,
-    token: state.token,
-    isLoading: state.isLoading,
-    error: state.error,
-  }));
+  const login = useAuthStore((state) => state.login);
+  const token = useAuthStore((state) => state.token);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const error = useAuthStore((state) => state.error);
 
   // --- 3. React Router Hooks ---
   const navigate = useNavigate();
@@ -109,16 +107,16 @@ const LoginPage = () => {
             </Alert>
           )}
 
-          <LoadingButton
+          <Button
             type="submit"
             fullWidth
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
-            loading={isLoading} // This connects the button to our store's state
+            loading={isLoading} 
             disabled={isLoading}
           >
             Ingresar
-          </LoadingButton>
+          </Button>
           
         </Box>
       </Box>
