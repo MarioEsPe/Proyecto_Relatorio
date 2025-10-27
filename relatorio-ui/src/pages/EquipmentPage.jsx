@@ -1,53 +1,65 @@
 // relatorio-ui/src/pages/EquipmentPage.jsx
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import api from '../services/api'; // Importamos nuestra instancia de Axios
+import React, { useState} from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../services/api'; 
 
-// Importar componentes de MUI
+import EquipmentFormModal from '../components/EquipmentFormModal';
+
 import {
   Typography,
   Box,
-  CircularProgress, // Spinner de carga
-  Alert,              // Mensaje de error
+  CircularProgress, 
+  Alert,              
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper
+  Paper, 
+  Button 
 } from '@mui/material';
 
-// 1. Definimos la función de 'fetch'
-// Esta es la función que React Query llamará.
-// Debe devolver una promesa (Axios ya lo hace).
 const fetchEquipment = async () => {
   const { data } = await api.get('/equipment');
   return data;
 };
+const createEquipment = async (newEquipment) => {
+  const { data } = await api.post('/equipment', newEquipment);
+  return data;
+};
 
 const EquipmentPage = () => {
-  // 2. Usamos el hook useQuery
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const queryClient =useQueryClient();
   const { 
-    data: equipmentList, // Renombramos 'data' a 'equipmentList'
-    isLoading, 
+    data: equipmentList, 
+    isLoading: isLoadingQuery, 
     isError, 
     error 
   } = useQuery({
-    queryKey: ['equipment'], // Esta es la "llave" única para este query
-    queryFn: fetchEquipment   // Esta es la función que se ejecutará
+    queryKey: ['equipment'], 
+    queryFn: fetchEquipment   
   });
 
-  // 3. Manejar el estado de Carga
-  if (isLoading) {
+  const createMutation = useMutation({
+    mutationFn: createEquipment,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      setIsModalOpen(false);
+    },
+    onError: (error) => {
+      console.error("Error creating equipment:", error);
+    }
+  });
+
+  if (isLoadingQuery) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
         <CircularProgress />
       </Box>
     );
   }
-
-  // 4. Manejar el estado de Error
   if (isError) {
     return (
       <Alert severity="error">
@@ -55,14 +67,19 @@ const EquipmentPage = () => {
       </Alert>
     );
   }
-
-  // 5. Renderizar los datos (Estado Exitoso)
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Equipment Catalog Management
-      </Typography>
-      
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>  
+        <Typography variant="h4" gutterBottom>
+          Equipment Catalog Management
+        </Typography>
+        <Button 
+          variant="contained" 
+          onClick={() => setIsModalOpen(true)}
+        >
+          Add New Equipment
+        </Button>
+      </Box>
       <TableContainer component={Paper}>
         <Table sx={{ minWidth: 650 }} aria-label="equipment table">
           <TableHead>
@@ -87,6 +104,12 @@ const EquipmentPage = () => {
           </TableBody>
         </Table>
       </TableContainer>
+      <EquipmentFormModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={createMutation.mutate} 
+        isLoading={createMutation.isLoading} 
+      />
     </Box>
   );
 };
