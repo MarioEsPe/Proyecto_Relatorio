@@ -1,3 +1,4 @@
+// relatorio-ui/src/components/ProtectedRoute.jsx
 import React from 'react';
 import { useAuthStore } from '../store/authStore';
 import { Navigate, useLocation } from 'react-router-dom';
