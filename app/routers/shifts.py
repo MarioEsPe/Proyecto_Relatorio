@@ -27,6 +27,53 @@ router = APIRouter(prefix="/shifts", tags=["Shifts"])
 SessionDep = Annotated[Session, Depends(get_session)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
+@router.get(
+    "/active/me",
+    response_model=ShiftReadWithDetails,
+    summary="Get the current user's active shift",
+    dependencies=[Depends(require_role([UserRole.SHIFT_SUPERINTENDENT]))],
+)
+def get_active_shift_for_user(
+    *, 
+    session: SessionDep, 
+    current_user: CurrentUser
+) -> Shift:
+    """
+    Get the single "OPEN" shift currently assigned to the authenticated user.
+    
+    This is the primary endpoint for the SHIFT_SUPERINTENDENT to load
+    their dashboard.
+    """
+    
+    # 1. Build the query to find the open shift for the current user
+    statement = (
+        select(Shift)
+        .where(Shift.status == "OPEN")
+        .where(Shift.incoming_superintendent_id == current_user.id)
+        .options(
+            # Eagerly load all related data needed for the dashboard
+            selectinload(Shift.status_logs),
+            selectinload(Shift.event_logs),
+            selectinload(Shift.task_logs),
+            selectinload(Shift.novelty_logs),
+            selectinload(Shift.generation_ramps),
+            selectinload(Shift.operational_readings)
+        )
+    )
+    
+    # 2. Execute the query
+    active_shift = session.exec(statement).first()
+    
+    # 3. Handle the case where no active shift is found
+    if not active_shift:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No active shift found for this user.",
+        )
+        
+    # 4. Return the complete shift data
+    return active_shift
+
 @router.post(
     "/handover",
     response_model=ShiftRead,
