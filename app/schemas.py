@@ -6,7 +6,7 @@ from typing import List, Optional
 from app.enums import UserRole, EmployeeType, EquipmentStatus, EventType, TicketType, TicketStatus, LicenseStatus, TaskCategory, NoveltyType, ResourceType
 
 """ 
---- CATÁLOGOS Y ENTIDADES FUNDAMENTALES ---
+--- CATALOGS AND CORE ENTITIES ---
 1.1 Position 
 1.2 ShiftGroup
 1.3 Employee
@@ -143,7 +143,7 @@ class OperationalParameterUpdate(SQLModel):
     is_active: Optional[bool] = None
 
 """ 
---- MÓDULO DE TURNO ---
+--- SHIFT MODULE ---
 2.1 Shift 
 2.2 ShiftAttendance
 2.3 EquipmentStatusLog
@@ -195,7 +195,7 @@ class StatusLogCreate(SQLModel):
     equipment_id: int
     status: EquipmentStatus 
     reason: str | None = None
-    timestamp: datetime # Campo obligatorio añadido
+    timestamp: datetime 
     
 class StatusLogRead(SQLModel):
     id: int
@@ -315,7 +315,7 @@ class OperationalReadingReadWithDetails(OperationalReadingRead):
     user: UserRead
         
 """ 
---- MÓDULOS AUXILIARES ---
+--- AUXILIARY MODULES ---
 3.1 MaintenanceTicket 
 3.2 License
 """    
@@ -365,7 +365,7 @@ class LicenseRead(SQLModel):
 class LicenseClose(SQLModel):
     end_time: datetime
 """
-SCHEMAS COMPUESTOS
+COMPOUND SCHEMAS
 """    
 class ShiftReadWithDetails(ShiftReadWithGroup):
     status_logs: List[StatusLogRead] = []

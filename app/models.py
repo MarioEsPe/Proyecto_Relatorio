@@ -7,7 +7,7 @@ from app.enums import UserRole, EmployeeType, EquipmentStatus, EventType, Ticket
 from app.schemas import EquipmentBase, TankBase, TankReadingBase,ScheduledTaskBase
 
 """ 
---- CATÁLOGOS Y ENTIDADES FUNDAMENTALES ---
+--- CATALOGS AND CORE ENTITIES ---
 1.1 Position 
 1.2 ShiftGroup
 1.3 Employee
@@ -84,7 +84,7 @@ class OperationalParameter(SQLModel, table=True):
     readings: list["OperationalReading"] = Relationship(back_populates="parameter")
     
 """ 
---- MÓDULO DE TURNO ---
+--- SHIFT MODULE ---
 2.1 Shift 
 2.2 ShiftAttendance
 2.3 EquipmentStatusLog
@@ -228,7 +228,7 @@ class OperationalReading(SQLModel, table=True):
     user: "User" = Relationship()            
     
 """ 
---- MÓDULOS AUXILIARES ---
+--- AUXILIARY MODULES ---
 3.1 MaintenanceTicket 
 3.2 License
 """    
