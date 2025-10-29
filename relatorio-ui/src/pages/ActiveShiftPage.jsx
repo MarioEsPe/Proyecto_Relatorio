@@ -1,12 +1,127 @@
 // relatorio-ui/src/pages/ActiveShiftPage.jsx
 import React from 'react';
-import { Typography } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
+import api from '../services/api';
+
+import { 
+  Box, 
+  Typography, 
+  CircularProgress, 
+  Alert, 
+  Paper,
+  Grid 
+} from '@mui/material';
+
+
+const fetchActiveShift = async () => {
+  const { data } = await api.get('/shifts/active/me');
+  return data; 
+};
 
 const ActiveShiftPage = () => {
+  
+  // --- 1. Hook de React Query ---
+  const { 
+    data: activeShift, 
+    isLoading, 
+    isError,
+    error 
+  } = useQuery({
+    queryKey: ['activeShift'], 
+    queryFn: fetchActiveShift,
+    refetchOnWindowFocus: false, 
+    retry: (failureCount, error) => {
+      if (error.response?.status === 404) {
+        return false;
+      }
+      return failureCount < 3; 
+    }
+  });
+
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ ml: 2 }}>
+          Loading Active Shift Data...
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (isError) {
+    if (error.response?.status === 404) {
+      return (
+        <Alert severity="info" variant="outlined" sx={{ maxWidth: 600, margin: 'auto', mt: 4 }}>
+          <Typography variant="h6">No Active Shift Found</Typography>
+          You are successfully logged in, but you have not been assigned an active shift yet.
+          <br />
+          Please wait for the Outgoing Superintendent to complete the handover.
+        </Alert>
+      );
+    }
+    
+    return (
+      <Alert severity="error" sx={{ maxWidth: 600, margin: 'auto', mt: 4 }}>
+        <Typography variant="h6">Error Loading Shift</Typography>
+        Could not fetch shift data. Details: {error.message}
+      </Alert>
+    );
+  }
+
   return (
-    <Typography variant="h4">
-      Active Shift Dashboard
-    </Typography>
+    <Box>
+      <Typography variant="h4" gutterBottom>
+        Active Shift Dashboard (Shift ID: {activeShift.id})
+      </Typography>
+      <Typography variant="subtitle1" gutterBottom>
+        Shift Start: {new Date(activeShift.start_time).toLocaleString()}
+      </Typography>
+
+      <Grid container spacing={3} sx={{ mt: 2 }}>
+        
+        {/* Columna de Eventos */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 2, minHeight: 300 }}>
+            <Typography variant="h6">Event Log</Typography>
+            {activeShift.event_logs.length === 0 ? (
+              <Typography sx={{ mt: 2, fontStyle: 'italic' }}>No events logged for this shift yet.</Typography>
+            ) : (
+              <ul>
+                {activeShift.event_logs.map(log => (
+                  <li key={log.id}>
+                    <strong>[{log.event_type}]</strong>: {log.description} 
+                    <em> ({new Date(log.timestamp).toLocaleTimeString()})</em>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Paper>
+        </Grid>
+
+        {/* Columna de Novedades */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 2, minHeight: 300 }}>
+            <Typography variant="h6">Novelties & Instructions</Typography>
+            {activeShift.novelty_logs.length === 0 ? (
+              <Typography sx={{ mt: 2, fontStyle: 'italic' }}>No novelties logged for this shift yet.</Typography>
+            ) : (
+              <ul>
+                {activeShift.novelty_logs.map(log => (
+                  <li key={log.id}>
+                    <strong>[{log.novelty_type}]</strong>: {log.description}
+                    <em> ({new Date(log.timestamp).toLocaleTimeString()} by {log.user.username})</em>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Paper>
+        </Grid>
+        
+        {/* Aquí añadiremos más 'Grid items' para otros paneles (Tareas, Equipos, etc.) */}
+        
+      </Grid>
+    </Box>
   );
 };
 
