@@ -4,7 +4,11 @@ from sqlalchemy import delete
 from app.database import engine
 from app.models import (
     User, Position, Employee, ShiftGroup, Equipment,
-    Shift, EventLog, NoveltyLog
+    Shift, EventLog, NoveltyLog, GroupMembership,
+    ShiftAttendance, EquipmentStatusLog, TaskLog,
+    GenerationRamp, TankReading, OperationalReading, 
+    MaintenanceTicket, License, Tank, ScheduledTask, 
+    OperationalParameter
 )
 from app.enums import (
     UserRole, EmployeeType, EquipmentStatus, EventType, NoveltyType
@@ -36,14 +40,31 @@ def seed_database():
     
     with Session(engine) as session:
         print("Clearing the database...")
-        session.execute(delete(NoveltyLog))
+        session.execute(delete(GroupMembership))
+        session.execute(delete(ShiftAttendance))
+        session.execute(delete(EquipmentStatusLog))
         session.execute(delete(EventLog))
+        session.execute(delete(TaskLog))
+        session.execute(delete(NoveltyLog))
+        session.execute(delete(GenerationRamp))
+        session.execute(delete(TankReading))
+        session.execute(delete(OperationalReading)) 
+        session.execute(delete(MaintenanceTicket))
+        session.execute(delete(License))
+        session.commit()
+        
         session.execute(delete(Shift))
-        session.execute(delete(Equipment))
-        session.execute(delete(ShiftGroup))
         session.execute(delete(Employee))
-        session.execute(delete(Position))
+        session.commit()
+        
         session.execute(delete(User))
+        session.execute(delete(ShiftGroup))
+        session.execute(delete(Position))
+        session.execute(delete(Equipment))
+        session.execute(delete(EventLog))
+        session.execute(delete(Tank))
+        session.execute(delete(ScheduledTask))
+        session.execute(delete(OperationalParameter))
         session.commit()
 
         print("Creating new data...")
