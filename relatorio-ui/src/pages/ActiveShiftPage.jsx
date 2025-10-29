@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 
 import NoveltyForm from '../components/NoveltyForm';
+import EventForm from '../components/EventForm';
 
 import { 
   Box, 
@@ -22,6 +23,11 @@ const fetchActiveShift = async () => {
 
 const createNoveltyLog = async ({ shiftId, noveltyData }) => {
   const { data } = await api.post(`/shifts/${shiftId}/novelties/`, noveltyData);
+  return data;
+};
+
+const createEventLog = async ({ shiftId, eventData }) => {
+  const { data } = await api.post(`/shifts/${shiftId}/events/`, eventData);
   return data;
 };
 
@@ -54,12 +60,29 @@ const ActiveShiftPage = () => {
       console.error("Failed to create novelty:", error);
     }
   });
+
+  const eventMutation = useMutation({
+    mutationFn: createEventLog,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['activeShift'] });
+    },
+    onError: (error) => {
+      console.error("Failed to create event:", error);
+    }
+  });
   
   const handleNoveltySubmit = (noveltyData, formOptions) => {
     noveltyMutation.mutate({
       shiftId: activeShift.id,
       noveltyData: noveltyData
     }, formOptions); 
+  };
+
+  const handleEventSubmit = (eventData, formOptions) => {
+    eventMutation.mutate({
+      shiftId: activeShift.id,
+      eventData: eventData
+    }, formOptions);
   };
 
   if (isLoading) {
@@ -120,6 +143,12 @@ const ActiveShiftPage = () => {
                 ))}
               </ul>
             )}
+
+            <EventForm
+              onSubmit={handleEventSubmit}
+              isLoading={eventMutation.isLoading}
+              error={eventMutation.error}
+            />
           </Paper>
         </Grid>
 
