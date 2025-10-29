@@ -1,7 +1,9 @@
 // relatorio-ui/src/pages/ActiveShiftPage.jsx
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
+
+import NoveltyForm from '../components/NoveltyForm';
 
 import { 
   Box, 
@@ -18,9 +20,14 @@ const fetchActiveShift = async () => {
   return data; 
 };
 
+const createNoveltyLog = async ({ shiftId, noveltyData }) => {
+  const { data } = await api.post(`/shifts/${shiftId}/novelties/`, noveltyData);
+  return data;
+};
+
 const ActiveShiftPage = () => {
+  const queryClient = useQueryClient();
   
-  // --- 1. Hook de React Query ---
   const { 
     data: activeShift, 
     isLoading, 
@@ -37,6 +44,23 @@ const ActiveShiftPage = () => {
       return failureCount < 3; 
     }
   });
+
+  const noveltyMutation = useMutation({
+    mutationFn: createNoveltyLog, 
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['activeShift'] });
+    },
+    onError: (error) => {
+      console.error("Failed to create novelty:", error);
+    }
+  });
+  
+  const handleNoveltySubmit = (noveltyData, formOptions) => {
+    noveltyMutation.mutate({
+      shiftId: activeShift.id,
+      noveltyData: noveltyData
+    }, formOptions); 
+  };
 
   if (isLoading) {
     return (
@@ -115,11 +139,15 @@ const ActiveShiftPage = () => {
                 ))}
               </ul>
             )}
+
+            <NoveltyForm 
+              onSubmit={handleNoveltySubmit}
+              isLoading={noveltyMutation.isLoading}
+              error={noveltyMutation.error}
+            />
           </Paper>
         </Grid>
-        
-        {/* Aquí añadiremos más 'Grid items' para otros paneles (Tareas, Equipos, etc.) */}
-        
+                
       </Grid>
     </Box>
   );
