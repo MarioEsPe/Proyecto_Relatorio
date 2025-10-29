@@ -74,6 +74,12 @@ def seed_database():
         user_admin = User(username="admin_ops", rpe="ADMIN001", role=UserRole.OPS_MANAGER, hashed_password=hashed_password_admin)
         session.add_all([user_demo, user_admin])
         session.commit()
+        
+        session.refresh(user_demo)
+        session.refresh(user_admin)
+        
+        print(f"Created user '{user_demo.username}' with ID: {user_demo.id}")
+        print(f"Created user '{user_admin.username}' with ID: {user_admin.id}")
 
         positions = [Position(**data) for data in POSITIONS_DATA]
         equipment = [Equipment(**data) for data in EQUIPMENT_DATA]
