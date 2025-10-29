@@ -241,7 +241,6 @@ class NoveltyLogCreate(SQLModel):
     novelty_type: NoveltyType
     timestamp: Optional[datetime] = Field(default=None)
     description: str
-    user_id: int
 
 class NoveltyLogRead(SQLModel):
     id: int
