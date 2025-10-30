@@ -1,7 +1,6 @@
 // relatorio-ui/src/pages/PersonnelPage.jsx
 import React, { useState } from 'react';
 
-// Importar componentes de MUI
 import {
   Typography,
   Box,
@@ -11,7 +10,7 @@ import {
 
 import PositionsPanel from '../components/PositionsPanel';
 import EmployeesPanel from '../components/EmployeesPanel';  
-
+import GroupsPanel from '../components/GroupsPanel';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -63,8 +62,7 @@ const PersonnelPage = () => {
         <EmployeesPanel />
       </TabPanel>
       <TabPanel value={currentTab} index={2}>
-        <Typography>Shift Groups Management (Coming Soon)</Typography>
-        {/* <GroupsPanel /> */}
+        <GroupsPanel />
       </TabPanel>
     </Box>
   );
