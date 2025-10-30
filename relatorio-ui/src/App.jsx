@@ -3,13 +3,13 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 
-// Importar componentes y páginas
 import LoginPage from './pages/LoginPage';
 import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import EquipmentPage from './pages/EquipmentPage';
 import PersonnelPage from './pages/PersonnelPage';
 import ActiveShiftPage from './pages/ActiveShiftPage';
+import HandoverPage from './pages/HandoverPage';
 
 function App() {
   const isLoading = useAuthStore((state) => state.isLoading);
@@ -37,20 +37,17 @@ function App() {
             </ProtectedRoute>
           }
         >
-          {/* Esta es la ruta "raíz" protegida. 
-            Redirige a la página principal por defecto.
-            Usamos <Navigate /> para enviar al usuario a la página inicial.
-          */}
+          
           <Route index element={<Navigate to="/active-shift" replace />} />
 
           {/* Rutas para SHIFT_SUPERINTENDENT */}
           <Route path="active-shift" element={<ActiveShiftPage />} />
+          <Route path="handover" element={<HandoverPage />} />
 
           {/* Rutas para OPS_MANAGER */}
           <Route path="equipment" element={<EquipmentPage />} />
           <Route path="personnel" element={<PersonnelPage />} />
           
-          {/* TODO: Añadir protección de rol más granular si es necesario */}
 
         </Route>
 

@@ -43,9 +43,20 @@ const MainLayout = () => {
           )}
 
           {user?.role === 'SHIFT_SUPERINTENDENT' && (
-            <Button color="inherit" onClick={() => handleNavigate('/active-shift')}>
-              Active Shift
-            </Button>
+            <>
+              <Button color="inherit" onClick={() => handleNavigate('/active-shift')}>
+                Active Shift
+              </Button>
+
+              <Button 
+                variant="outlined" 
+                color="warning" 
+                sx={{ ml: 2 }} 
+                onClick={() => handleNavigate('/handover')}
+              >
+                Handover Shift
+              </Button>
+            </>            
           )}
 
           {/* Botón de Logout */}
@@ -55,9 +66,7 @@ const MainLayout = () => {
         </Toolbar>
       </AppBar>
 
-      {/* --- CONTENIDO DE LA PÁGINA --- */}
       <Box component="main" sx={{ p: 3 }}>
-        {/* El router renderizará la página actual aquí */}
         <Outlet /> 
       </Box>
     </Box>
