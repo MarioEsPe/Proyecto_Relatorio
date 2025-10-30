@@ -12,6 +12,7 @@ import TaskLoggingPanel from '../components/TaskLoggingPanel';
 import MaintenanceTicketPanel from '../components/MaintenanceTicketPanel';
 import LicensePanel from '../components/LicensePanel';
 import GenerationRampPanel from '../components/GenerationRampPanel';
+import AttendancePanel from '../components/AttendancePanel';
 
 import { 
   Box, 
@@ -235,6 +236,12 @@ const ActiveShiftPage = () => {
           <GenerationRampPanel 
             shiftId={activeShift.id} 
             activeShiftData={activeShift} 
+          />
+        </Grid>
+
+        <Grid item xs={12}>
+          <AttendancePanel 
+            shiftId={activeShift.id} 
           />
         </Grid>
 
