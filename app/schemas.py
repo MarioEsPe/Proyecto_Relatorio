@@ -27,6 +27,10 @@ class PositionCreate(PositionBase):
 class PositionRead(PositionBase):
     id: int
 
+class PositionUpdate(SQLModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
 # 1.2 ShiftGroup
 class ShiftGroupBase(SQLModel):
     name: str
@@ -55,6 +59,9 @@ class EmployeeReadWithPosition(EmployeeRead):
 
 class EmployeeReadWithDetails(EmployeeReadWithPosition):
     groups: List[ShiftGroupRead] = []   
+
+class ShiftGroupReadWithMembers(ShiftGroupRead):
+    members: List[EmployeeRead] = []
 
 # 1.4 User 
 class UserCreate(SQLModel):
