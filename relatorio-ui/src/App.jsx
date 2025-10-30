@@ -10,6 +10,7 @@ import EquipmentPage from './pages/EquipmentPage';
 import PersonnelPage from './pages/PersonnelPage';
 import ActiveShiftPage from './pages/ActiveShiftPage';
 import HandoverPage from './pages/HandoverPage';
+import RoleBasedRedirect from './pages/RoleBasedRedirect';
 
 function App() {
   const isLoading = useAuthStore((state) => state.isLoading);
@@ -38,7 +39,7 @@ function App() {
           }
         >
           
-          <Route index element={<Navigate to="/active-shift" replace />} />
+          <Route index element={<RoleBasedRedirect />} />
 
           {/* Rutas para SHIFT_SUPERINTENDENT */}
           <Route path="active-shift" element={<ActiveShiftPage />} />
