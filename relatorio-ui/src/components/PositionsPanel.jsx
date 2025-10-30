@@ -3,7 +3,9 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 
-// Importar componentes de MUI
+import PositionFormModal from './PositionFormModal';
+import ConfirmationDialog from './ConfirmationDialog';
+
 import {
   Typography,
   Box,
@@ -17,14 +19,12 @@ import {
   TableRow,
   Paper,
   Button,
-  TextField,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle
+  IconButton
 } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 
-// --- Funciones de API para Puestos ---
+
 const fetchPositions = async () => {
   const { data } = await api.get('/personnel/positions/');
   return data;
@@ -35,48 +35,93 @@ const createPosition = async (newPosition) => {
   return data;
 };
 
-// --- Componente del Panel ---
+const updatePosition = async (positionData) => {
+  const { id, ...dataToUpdate } = positionData;
+  const { data } = await api.put(`/personnel/positions/${id}`, dataToUpdate);
+  return data;
+};
+
+const deletePosition = async (positionId) => {
+  await api.delete(`/personnel/positions/${positionId}`);
+  return positionId;
+};
+
 const PositionsPanel = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newPosition, setNewPosition] = useState({ name: '', description: '' });
+  const [positionToEdit, setPositionToEdit] = useState(null); 
+  const [positionToDelete, setPositionToDelete] = useState(null); 
 
-  // Query para LEER Puestos
+
   const { 
     data: positions, 
     isLoading, 
     isError, 
     error 
   } = useQuery({
-    queryKey: ['positions'], // Llave única para este query
+    queryKey: ['positions'], 
     queryFn: fetchPositions
   });
 
-  // Mutación para CREAR Puestos
   const createMutation = useMutation({
     mutationFn: createPosition,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['positions'] });
-      setIsModalOpen(false);
-      setNewPosition({ name: '', description: '' }); // Resetear formulario
+      setIsModalOpen(false); 
     },
-    // TODO: Manejar onError
   });
 
-  // --- Manejadores de UI ---
-  const handleOpenModal = () => setIsModalOpen(true);
-  const handleCloseModal = () => setIsModalOpen(false);
+  const updateMutation = useMutation({
+    mutationFn: updatePosition,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['positions'] });
+      setPositionToEdit(null);
+    },
+  });
 
-  const handleFormChange = (e) => {
-    setNewPosition({ ...newPosition, [e.target.name]: e.target.value });
+  const deleteMutation = useMutation({
+    mutationFn: deletePosition,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['positions'] });
+      setPositionToDelete(null);
+    },
+  });
+
+  const handleOpenCreateModal = () => {
+    setPositionToEdit(null);
+    setIsModalOpen(true);
+  };
+  
+  const handleOpenEditModal = (position) => {
+    setPositionToEdit(position);
+    setIsModalOpen(true);
+  };
+  
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setPositionToEdit(null); 
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    createMutation.mutate(newPosition);
+  const handleOpenDeleteDialog = (position) => {
+    setPositionToDelete(position);
+  };
+  
+  const handleCloseDeleteDialog = () => {
+    setPositionToDelete(null);
   };
 
-  // --- Renderizado de Estados ---
+  const handleSubmit = (formData) => {
+    if (positionToEdit) {
+      updateMutation.mutate(formData);
+    } else {
+      createMutation.mutate(formData);
+    }
+  };
+  
+  const handleDeleteConfirm = () => {
+    deleteMutation.mutate(positionToDelete.id);
+  };
+
   if (isLoading) {
     return <CircularProgress />;
   }
@@ -84,7 +129,6 @@ const PositionsPanel = () => {
     return <Alert severity="error">Error fetching positions: {error.message}</Alert>;
   }
 
-  // --- Renderizado Principal ---
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -94,7 +138,7 @@ const PositionsPanel = () => {
         </Button>
       </Box>
 
-      {/* Tabla de Puestos */}
+      {/* Positions Table */}
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -102,6 +146,7 @@ const PositionsPanel = () => {
               <TableCell>ID</TableCell>
               <TableCell>Name</TableCell>
               <TableCell>Description</TableCell>
+              <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -110,48 +155,45 @@ const PositionsPanel = () => {
                 <TableCell>{pos.id}</TableCell>
                 <TableCell>{pos.name}</TableCell>
                 <TableCell>{pos.description || 'N/A'}</TableCell>
+                <TableCell align="right">
+                  <IconButton 
+                    size="small" 
+                    onClick={() => handleOpenEditModal(pos)}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton 
+                    size="small" 
+                    color="error"
+                    onClick={() => handleOpenDeleteDialog(pos)}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
 
-      {/* Modal para Crear Puesto */}
-      <Dialog open={isModalOpen} onClose={handleCloseModal} component="form" onSubmit={handleSubmit}>
-        <DialogTitle>Add New Position</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            required
-            margin="dense"
-            id="name"
-            name="name"
-            label="Position Name"
-            type="text"
-            fullWidth
-            variant="outlined"
-            value={newPosition.name}
-            onChange={handleFormChange}
-          />
-          <TextField
-            margin="dense"
-            id="description"
-            name="description"
-            label="Description"
-            type="text"
-            fullWidth
-            variant="outlined"
-            value={newPosition.description}
-            onChange={handleFormChange}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseModal} disabled={createMutation.isLoading}>Cancel</Button>
-          <Button type="submit" variant="contained" disabled={createMutation.isLoading}>
-            {createMutation.isLoading ? 'Saving...' : 'Create'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Create/Edit Modal */}
+      <PositionFormModal 
+        open={isModalOpen}
+        onClose={handleCloseModal}
+        onSubmit={handleSubmit}
+        isLoading={createMutation.isLoading || updateMutation.isLoading}
+        initialData={positionToEdit}
+      />
+      
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        open={Boolean(positionToDelete)}
+        onClose={handleCloseDeleteDialog}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Position"
+        description={`Are you sure you want to delete "${positionToDelete?.name}"? This action cannot be undone.`}
+        isLoading={deleteMutation.isLoading}
+      />
     </Box>
   );
 };
