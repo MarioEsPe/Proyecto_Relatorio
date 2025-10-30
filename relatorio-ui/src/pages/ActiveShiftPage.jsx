@@ -5,6 +5,7 @@ import api from '../services/api';
 
 import NoveltyForm from '../components/NoveltyForm';
 import EventForm from '../components/EventForm';
+import EquipmentStatusPanel from '../components/EquipmentStatusPanel';
 
 import { 
   Box, 
@@ -175,6 +176,10 @@ const ActiveShiftPage = () => {
               error={noveltyMutation.error}
             />
           </Paper>
+        </Grid>
+        
+        <Grid item xs={12}>
+          <EquipmentStatusPanel shiftId={activeShift.id} />
         </Grid>
                 
       </Grid>
