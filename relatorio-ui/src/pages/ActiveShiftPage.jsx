@@ -10,6 +10,7 @@ import TankReadingPanel from '../components/TankReadingPanel';
 import OperationalReadingPanel from '../components/OperationalReadingPanel';
 import TaskLoggingPanel from '../components/TaskLoggingPanel';
 import MaintenanceTicketPanel from '../components/MaintenanceTicketPanel';
+import LicensePanel from '../components/LicensePanel';
 
 import { 
   Box, 
@@ -224,6 +225,10 @@ const ActiveShiftPage = () => {
         <Grid item xs={12}>
           <MaintenanceTicketPanel />
         </Grid>
+
+        <Grid item xs={12}>
+          <LicensePanel />
+        </Grid>      
 
       </Grid>
     </Box>
