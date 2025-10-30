@@ -8,6 +8,7 @@ import EventForm from '../components/EventForm';
 import EquipmentStatusPanel from '../components/EquipmentStatusPanel';
 import TankReadingPanel from '../components/TankReadingPanel';
 import OperationalReadingPanel from '../components/OperationalReadingPanel';
+import TaskLoggingPanel from '../components/TaskLoggingPanel';
 
 import { 
   Box, 
@@ -136,7 +137,7 @@ const ActiveShiftPage = () => {
             <Typography variant="h6">Event Log</Typography>
             {activeShift.event_logs.length === 0 ? (
               <Typography sx={{ mt: 2, fontStyle: 'italic' }}>No events logged for this shift yet.</Typography>
-            ) : (
+            ) : ( 
               <ul>
                 {activeShift.event_logs.map(log => (
                   <li key={log.id}>
@@ -152,8 +153,28 @@ const ActiveShiftPage = () => {
               isLoading={eventMutation.isLoading}
               error={eventMutation.error}
             />
+            <Typography variant="h6" sx={{ mt: 4, borderTop: 1, borderColor: 'divider', pt: 2 }}>
+              Completed Tasks Log
+            </Typography>
+            
+            {activeShift.task_logs.length === 0 ? (
+              <Typography sx={{ mt: 2, fontStyle: 'italic' }}>No tasks logged for this shift yet.</Typography>
+            ) : (
+              <ul>
+                {activeShift.task_logs.map(log => (
+                  <li key={log.id}>
+                    <strong>{log.scheduled_task.name}</strong> 
+                    <em> ({new Date(log.completion_time).toLocaleTimeString()} by {log.user.username})</em>
+                  </li>
+                ))}
+              </ul>
+            )}
+
           </Paper>
         </Grid>
+
+
+
 
         {/* Columna de Novedades */}
         <Grid item xs={12} md={6}>
@@ -191,6 +212,13 @@ const ActiveShiftPage = () => {
         <Grid item xs={12}>
           <OperationalReadingPanel shiftId={activeShift.id} />
         </Grid>     
+
+        <Grid item xs={12}>
+          <TaskLoggingPanel 
+            shiftId={activeShift.id} 
+            activeShiftData={activeShift} 
+          />
+        </Grid>
 
       </Grid>
     </Box>
