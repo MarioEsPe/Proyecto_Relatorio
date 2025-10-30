@@ -7,6 +7,7 @@ import NoveltyForm from '../components/NoveltyForm';
 import EventForm from '../components/EventForm';
 import EquipmentStatusPanel from '../components/EquipmentStatusPanel';
 import TankReadingPanel from '../components/TankReadingPanel';
+import OperationalReadingPanel from '../components/OperationalReadingPanel';
 
 import { 
   Box, 
@@ -185,6 +186,10 @@ const ActiveShiftPage = () => {
 
         <Grid item xs={12}>
           <TankReadingPanel shiftId={activeShift.id} />
+        </Grid>
+
+        <Grid item xs={12}>
+          <OperationalReadingPanel shiftId={activeShift.id} />
         </Grid>     
 
       </Grid>
