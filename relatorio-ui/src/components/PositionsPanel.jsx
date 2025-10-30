@@ -133,7 +133,7 @@ const PositionsPanel = () => {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h5">Job Positions</Typography>
-        <Button variant="contained" onClick={handleOpenModal}>
+        <Button variant="contained" onClick={handleOpenCreateModal}>
           Add New Position
         </Button>
       </Box>
