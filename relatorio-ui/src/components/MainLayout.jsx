@@ -21,6 +21,11 @@ const MainLayout = () => {
     navigate(path);
   };
 
+  const handleLogout = () => {
+    logout(); 
+    navigate('/login'); 
+  };
+
   return (
     <Box sx={{ flexGrow: 1 }}>
       {/* --- BARRA DE NAVEGACIÓN --- */}
@@ -33,6 +38,9 @@ const MainLayout = () => {
           {/* --- NAVEGACIÓN CONDICIONAL POR ROL --- */}
           {user?.role === 'OPS_MANAGER' && (
             <>
+              <Button color="inherit" onClick={() => handleNavigate('/dashboard')}>
+                Dashboard
+              </Button>
               <Button color="inherit" onClick={() => handleNavigate('/equipment')}>
                 Equipment
               </Button>
@@ -44,10 +52,9 @@ const MainLayout = () => {
 
           {user?.role === 'SHIFT_SUPERINTENDENT' && (
             <>
-              <Button color="inherit" onClick={() => handleNavigate('/active-shift')}>
-                Active Shift
+              <Button color="inherit" onClick={() => handleNavigate('/dashboard')}>
+                Dashboard
               </Button>
-
               <Button 
                 variant="outlined" 
                 color="warning" 
@@ -60,7 +67,7 @@ const MainLayout = () => {
           )}
 
           {/* Botón de Logout */}
-          <Button color="inherit" onClick={logout}>
+          <Button color="inherit" onClick={handleLogout}> 
             Log Out (User: {user?.username})
           </Button>
         </Toolbar>
