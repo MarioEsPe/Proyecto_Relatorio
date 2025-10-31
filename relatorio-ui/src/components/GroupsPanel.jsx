@@ -211,7 +211,11 @@ const GroupsPanel = () => {
                 <ListItem key={member.id}>
                   <ListItemText 
                     primary={member.full_name} 
-                    secondary={member.rpe} 
+                    secondary={
+                      member.base_position 
+                        ? `${member.base_position.name} (${member.rpe})`
+                        : member.rpe
+                    } 
                   />
                   <ListItemSecondaryAction>
                     <IconButton 
