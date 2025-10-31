@@ -31,7 +31,7 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
     "/active/me",
     response_model=ShiftReadWithDetails,
     summary="Get the current user's active shift",
-    dependencies=[Depends(require_role([UserRole.SHIFT_SUPERINTENDENT]))],
+    dependencies=[Depends(require_role([UserRole.SHIFT_SUPERINTENDENT, UserRole.OPS_MANAGER]))],
 )
 def get_active_shift_for_user(
     *, 
@@ -41,8 +41,8 @@ def get_active_shift_for_user(
     """
     Get the single "OPEN" shift currently assigned to the authenticated user.
     
-    This is the primary endpoint for the SHIFT_SUPERINTENDENT to load
-    their dashboard.
+    This endpoint is accessible by both SHIFT_SUPERINTENDENT and OPS_MANAGER
+    to check if they have an active shift assignment.
     """
     
     # 1. Build the query to find the open shift for the current user
