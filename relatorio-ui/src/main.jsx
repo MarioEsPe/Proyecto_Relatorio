@@ -4,15 +4,19 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
-// --- 1. Importar React Query ---
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// --- 2. Crear el Cliente ---
+import { initializeAuthStore, useAuthStore } from './store/authStore.js';
+
 const queryClient = new QueryClient();
+
+initializeAuthStore(queryClient);
+
+useAuthStore.getState().checkAuth();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {/* --- 3. Envolver la App --- */}
+    {/* --- Envolver la App --- */}
     <QueryClientProvider client={queryClient}>
       <App />
     </QueryClientProvider>
