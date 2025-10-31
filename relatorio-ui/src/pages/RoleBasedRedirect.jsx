@@ -20,18 +20,8 @@ const RoleBasedRedirect = () => {
       </Box>
     );
   }
-
-  if (user.role === 'OPS_MANAGER') {
  
-    return <Navigate to="/equipment" replace />;
-  }
-
-  if (user.role === 'SHIFT_SUPERINTENDENT') {
- 
-    return <Navigate to="/active-shift" replace />;
-  }
-
-  return <Navigate to="/login" replace />;
+    return <Navigate to="/dashboard" replace />;
 };
 
 export default RoleBasedRedirect;
