@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-// Import Material-UI components
 import { 
   Container, 
   Box, 
@@ -14,46 +13,34 @@ import {
 } from '@mui/material';
 
 const LoginPage = () => {
-  // --- 1. Local State for the Form ---
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  // --- 2. State from Zustand Store ---
-  // We select the pieces of state and actions we need
   const login = useAuthStore((state) => state.login);
   const token = useAuthStore((state) => state.token);
   const isLoading = useAuthStore((state) => state.isLoading);
   const error = useAuthStore((state) => state.error);
 
-  // --- 3. React Router Hooks ---
   const navigate = useNavigate();
   const location = useLocation();
-  // Get the 'from' path saved by ProtectedRoute, or default to dashboard
-  const from = location.state?.from?.pathname || '/';
 
-  // --- 4. Submit Handler ---
+  const from = '/';
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!username || !password) {
-      // Opcional: validación local antes de llamar al store
       return; 
     }
-    // Call the login action from our store
     login(username, password);
   };
 
-  // --- 5. Effect for Redirection ---
-  // This effect runs when the 'token' value changes.
   useEffect(() => {
     if (token) {
-      // Login was successful!
-      // Navigate to the page the user was trying to access.
       navigate(from, { replace: true });
     }
   }, [token, navigate, from]);
 
 
-  // --- 6. The UI (JSX) ---
   return (
     <Container component="main" maxWidth="xs">
       <Box
