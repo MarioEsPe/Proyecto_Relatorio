@@ -174,11 +174,12 @@ const GroupsPanel = () => {
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid item xs={8}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Add Employee</InputLabel>
+                  {/*<InputLabel>Add Employee</InputLabel>*/}
                   <Select
                     value={employeeToAdd}
-                    label="Add Employee"
+                    // label="Add Employee"
                     onChange={(e) => setEmployeeToAdd(e.target.value)}
+                    displayEmpty
                   >
                     <MenuItem value="">
                       <em>--- Select Employee ---</em>
