@@ -61,7 +61,7 @@ class EmployeeReadWithDetails(EmployeeReadWithPosition):
     groups: List[ShiftGroupRead] = []   
 
 class ShiftGroupReadWithMembers(ShiftGroupRead):
-    members: List[EmployeeRead] = []
+    members: List[EmployeeReadWithPosition] = []
 
 # 1.4 User 
 class UserCreate(SQLModel):

@@ -10,7 +10,7 @@ from app.enums import UserRole
 from app.models import Position, Employee, ShiftGroup, User
 from app.schemas import (
     PositionCreate, PositionRead, PositionUpdate,
-    EmployeeCreate, EmployeeReadWithDetails, EmployeeRead,
+    EmployeeCreate, EmployeeReadWithDetails, EmployeeRead, EmployeeReadWithPosition,
     ShiftGroupCreate, ShiftGroupRead, ShiftGroupReadWithMembers
 )
 from app.routers.login import get_current_user
@@ -132,9 +132,11 @@ def add_employee_to_group(group_id: int, employee_id: int, session: SessionDep) 
 @router.get("/groups/", response_model=List[ShiftGroupReadWithMembers])
 def get_all_groups(session: SessionDep, current_user: AuthUser) -> List[ShiftGroup]:
     """
-    Get a list of all shift groups, including their members.
+    Get a list of all shift groups, including their members and their positions.
     """
-    query = select(ShiftGroup).options(selectinload(ShiftGroup.members))
+    query = select(ShiftGroup).options(
+        selectinload(ShiftGroup.members).selectinload(Employee.base_position)
+    )
     groups = session.exec(query).all()
     return groups
 
