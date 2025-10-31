@@ -1,5 +1,5 @@
 // relatorio-ui/src/components/GroupsPanel.jsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import ConfirmationDialog from './ConfirmationDialog';
@@ -69,6 +69,23 @@ const GroupsPanel = () => {
     queryFn: fetchEmployees
   });
   
+  const assignedEmployeeIds = useMemo(() => {
+    if (!groups) return new Set();
+    
+    const idSet = new Set();
+    for (const group of groups) {
+      for (const member of group.members) {
+        idSet.add(member.id);
+      }
+    }
+    return idSet;
+  }, [groups]);
+
+  const availableEmployees = useMemo(() => {
+    if (!employees) return [];
+    return employees.filter(emp => !assignedEmployeeIds.has(emp.id));
+  }, [employees, assignedEmployeeIds]);
+
   const createMutation = useMutation({
     mutationFn: createGroup,
     onSuccess: () => {
@@ -163,9 +180,12 @@ const GroupsPanel = () => {
                     label="Add Employee"
                     onChange={(e) => setEmployeeToAdd(e.target.value)}
                   >
-                    {employees?.map(emp => (
+                    <MenuItem value="">
+                      <em>--- Select Employee ---</em>
+                    </MenuItem>
+                    {availableEmployees.map(emp => (
                       <MenuItem key={emp.id} value={emp.id}>{emp.full_name} ({emp.rpe})</MenuItem>
-                    ))}
+                    ))}  
                   </Select>
                 </FormControl>
               </Grid>
