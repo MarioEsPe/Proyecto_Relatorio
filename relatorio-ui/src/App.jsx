@@ -12,6 +12,7 @@ import ActiveShiftPage from './pages/ActiveShiftPage';
 import HandoverPage from './pages/HandoverPage';
 import RoleBasedRedirect from './pages/RoleBasedRedirect';
 import DashboardPage from './pages/DashboardPage';
+import ReportViewerPage from './pages/ReportViewerPage';
 
 function App() {
   const isLoading = useAuthStore((state) => state.isLoading);
@@ -52,6 +53,8 @@ function App() {
           <Route path="equipment" element={<EquipmentPage />} />
           <Route path="personnel" element={<PersonnelPage />} />
           
+          <Route path="reports/:reportId" element={<ReportViewerPage />} />  
+
         </Route>
       </Routes>
     </BrowserRouter>
