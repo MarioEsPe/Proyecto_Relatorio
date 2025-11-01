@@ -1,9 +1,13 @@
 # app/schemas.py
 from sqlmodel import SQLModel, Field
-from datetime import datetime
+from datetime import datetime, date
 from typing import List, Optional
 
-from app.enums import UserRole, EmployeeType, EquipmentStatus, EventType, TicketType, TicketStatus, LicenseStatus, TaskCategory, NoveltyType, ResourceType
+from app.enums import (
+    UserRole, EmployeeType, EquipmentStatus, EventType, TicketType, 
+    TicketStatus, LicenseStatus, TaskCategory, NoveltyType, ResourceType,
+    ShiftDesignator
+)    
 
 """ 
 --- CATALOGS AND CORE ENTITIES ---
@@ -168,6 +172,10 @@ class ShiftRead(SQLModel):
     start_time: datetime
     end_time: datetime | None
     status: str
+    
+    shift_date: date | None
+    shift_designator: Optional[ShiftDesignator] = None
+    
     outgoing_superintendent_id: int | None = None
     incoming_superintendent_id: int | None = None
     scheduled_group_id: int | None = None

@@ -1,9 +1,13 @@
 # app/models.py
 from sqlmodel import Field, SQLModel, Relationship, Session
-from datetime import datetime
+from datetime import datetime,date
 from typing import List, Optional
 
-from app.enums import UserRole, EmployeeType, EquipmentStatus, EventType, TicketType, TicketStatus, ResourceType, LicenseStatus, TaskCategory, NoveltyType
+from app.enums import (
+    UserRole, EmployeeType, EquipmentStatus, EventType, TicketType, 
+    TicketStatus, ResourceType, LicenseStatus, TaskCategory, NoveltyType,
+    ShiftDesignator
+)    
 from app.schemas import EquipmentBase, TankBase, TankReadingBase,ScheduledTaskBase
 
 """ 
@@ -102,6 +106,10 @@ class Shift(SQLModel, table=True):
     start_time: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     end_time: datetime | None = Field(default = None)
     status: str = Field(index=True)
+    
+    shift_date: Optional[date] = Field(default=None, index=True)
+    shift_designator: Optional[str] = Field(default=None, index=True)
+    
     
     outgoing_superintendent_id: Optional[int] = Field(default = None, foreign_key="user.id")
     incoming_superintendent_id: Optional[int] = Field(default = None, foreign_key="user.id")

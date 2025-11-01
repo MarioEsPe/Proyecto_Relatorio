@@ -1,6 +1,11 @@
 # app/enums.py
 from enum import Enum
 
+class ShiftDesignator(int, Enum):
+    SHIFT_1 = 1  # 23:00 - 07:00
+    SHIFT_2 = 2  # 07:00 - 15:00
+    SHIFT_3 = 3  # 15:00 - 23:00
+
 class UserRole(str, Enum):
     OPS_MANAGER = "OPS_MANAGER"
     SHIFT_SUPERINTENDENT = "SHIFT_SUPERINTENDENT"
