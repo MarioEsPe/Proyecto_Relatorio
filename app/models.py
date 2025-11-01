@@ -108,7 +108,7 @@ class Shift(SQLModel, table=True):
     status: str = Field(index=True)
     
     shift_date: Optional[date] = Field(default=None, index=True)
-    shift_designator: Optional[str] = Field(default=None, index=True)
+    shift_designator: Optional[int] = Field(default=None, index=True)
     
     
     outgoing_superintendent_id: Optional[int] = Field(default = None, foreign_key="user.id")

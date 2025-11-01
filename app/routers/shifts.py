@@ -125,20 +125,20 @@ def handover_shift(
 
     if not shift_to_close.shift_designator or not shift_to_close.shift_date:
         current_date = shift_to_close.start_time.date()
-        current_designator = ShiftDesignator.SHIFT_1 
+        current_designator_enum = ShiftDesignator.SHIFT_1 
         
         shift_to_close.shift_date = current_date
-        shift_to_close.shift_designator = current_designator
+        shift_to_close.shift_designator = current_designator_enum.value
         
     else:
         current_date = shift_to_close.shift_date
-        current_designator = shift_to_close.shift_designator
+        current_designator_enum = ShiftDesignator(shift_to_close.shift_designator)
 
-    if current_designator == ShiftDesignator.SHIFT_3:
-        new_shift_designator = ShiftDesignator.SHIFT_1
+    if current_designator_enum == ShiftDesignator.SHIFT_3:
+        new_shift_designator_enum = ShiftDesignator.SHIFT_1
         new_shift_date = current_date + timedelta(days=1)
     else:
-        new_shift_designator = ShiftDesignator(current_designator.value + 1)
+        new_shift_designator_enum = ShiftDesignator(current_designator_enum.value + 1)
         new_shift_date = current_date
 
     try:
