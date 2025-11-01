@@ -3,7 +3,7 @@ from typing import Annotated, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
-from datetime import datetime
+from datetime import datetime, date, timedelta
 
 from app.database import get_session
 from app.models import (
@@ -22,6 +22,7 @@ from app.schemas import (
 from app.routers.login import get_current_user
 from app.dependencies import require_role, UserRole
 from app.security import verify_password
+from app.enums import ShiftDesignator
 
 router = APIRouter(prefix="/shifts", tags=["Shifts"])
 SessionDep = Annotated[Session, Depends(get_session)]
@@ -45,13 +46,11 @@ def get_active_shift_for_user(
     to check if they have an active shift assignment.
     """
     
-    # 1. Build the query to find the open shift for the current user
     statement = (
         select(Shift)
         .where(Shift.status == "OPEN")
         .where(Shift.incoming_superintendent_id == current_user.id)
         .options(
-            # Eagerly load all related data needed for the dashboard
             selectinload(Shift.status_logs),
             selectinload(Shift.event_logs),
             selectinload(Shift.task_logs),
@@ -61,17 +60,14 @@ def get_active_shift_for_user(
         )
     )
     
-    # 2. Execute the query
     active_shift = session.exec(statement).first()
     
-    # 3. Handle the case where no active shift is found
     if not active_shift:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No active shift found for this user.",
         )
         
-    # 4. Return the complete shift data
     return active_shift
 
 @router.post(
@@ -92,17 +88,16 @@ def handover_shift(
     1. Validates the credentials of the Outgoing Superintendent (logged in).
     2. Validates the credentials of the Incoming Superintendent (can be the same user).
     3. Closes the old shift.
-    4. Opens a new shift for the incoming user and generates their attendance sheet.
+    4. Calculates the next shift date and designator (T1, T2, T3).
+    5. Opens a new shift for the incoming user and generates their attendance sheet.
     All in a single transaction.
     """
-    # 1. Validate Outgoing Superintendent (User A)
     if not verify_password(handover_data.outgoing_superintendent_password,current_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials for outgoing superintendent"
         )
-    
-    # 2. Validate Incoming Superintendent (User B)    
+       
     user_b_statement = select(User).where(User.username == handover_data.incoming_superintendent_username)
     user_b = session.exec(user_b_statement).first()
     
@@ -112,14 +107,12 @@ def handover_shift(
             detail="Invalid credentials for incoming superintendent"
         )
 
-    # 3. Validate the shift-to-close and the new group
     shift_to_close = session.get(Shift, handover_data.shift_to_close_id)
     if not shift_to_close:
         raise HTTPException(status_code=404, detail="Shift to close not found")
     if shift_to_close.status != "OPEN":
          raise HTTPException(status_code=400, detail="Shift is already closed")
          
-    # Ownership check: Only the superintendent who *received* (opened) the shift can hand it over.
     if shift_to_close.incoming_superintendent_id != current_user.id:
         raise HTTPException(status_code=403, detail="You are not authorized to hand over this shift")
     
@@ -127,25 +120,44 @@ def handover_shift(
     if not new_group:
         raise HTTPException(status_code=404, detail="Scheduled group not found")
 
-    # --- ATOMIC TRANSACTION START ---
+    new_shift_date: date
+    new_shift_designator: ShiftDesignator
+
+    if not shift_to_close.shift_designator or not shift_to_close.shift_date:
+        current_date = shift_to_close.start_time.date()
+        current_designator = ShiftDesignator.SHIFT_1 
+        
+        shift_to_close.shift_date = current_date
+        shift_to_close.shift_designator = current_designator
+        
+    else:
+        current_date = shift_to_close.shift_date
+        current_designator = shift_to_close.shift_designator
+
+    if current_designator == ShiftDesignator.SHIFT_3:
+        new_shift_designator = ShiftDesignator.SHIFT_1
+        new_shift_date = current_date + timedelta(days=1)
+    else:
+        new_shift_designator = ShiftDesignator(current_designator.value + 1)
+        new_shift_date = current_date
+
     try:
-        # 4. Close the old shift
         shift_to_close.end_time = datetime.utcnow()
         shift_to_close.status = "CLOSED"
-        shift_to_close.outgoing_superintendent_id = current_user.id # User A (Outgoing)
+        shift_to_close.outgoing_superintendent_id = current_user.id 
         session.add(shift_to_close)
 
-        # 5. Create the new shift
         new_shift = Shift(
-            start_time=shift_to_close.end_time, # New shift starts exactly when the old one ends
+            start_time=shift_to_close.end_time, 
             status="OPEN",
-            incoming_superintendent_id=user_b.id, # User B (Incoming)
-            scheduled_group_id=new_group.id
+            incoming_superintendent_id=user_b.id, 
+            scheduled_group_id=new_group.id,
+            shift_date=new_shift_date,               
+            shift_designator=new_shift_designator.value
         )
         session.add(new_shift)
-        session.commit() # Commit both changes
+        session.commit() 
         
-        # 6. Generate the attendance sheet for the *new* shift
         session.refresh(new_shift)
         for member in new_group.members:
             attendance_record = ShiftAttendance(
@@ -163,7 +175,6 @@ def handover_shift(
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=f"Transaction failed: {e}")
-    # --- TRANSACTION END ---
     
     return new_shift
             

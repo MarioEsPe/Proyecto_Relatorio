@@ -11,10 +11,11 @@ from app.models import (
     OperationalParameter
 )
 from app.enums import (
-    UserRole, EmployeeType, EquipmentStatus, EventType, NoveltyType
+    UserRole, EmployeeType, EquipmentStatus, EventType, 
+    NoveltyType, ShiftDesignator
 )
 from app.security import get_password_hash
-from datetime import datetime, timedelta, timezone 
+from datetime import datetime, timedelta, timezone, date 
 
 # --- SAMPLE DATA ---
 POSITIONS_DATA = [
@@ -87,11 +88,15 @@ def seed_database():
         session.add_all(positions + equipment + employees)
         session.commit()
         
+        start_of_shift = datetime.now(timezone.utc) - timedelta(hours=4)
+        
         shift = Shift(
-            start_time=datetime.now(timezone.utc) - timedelta(hours=4), 
+            start_time=start_of_shift, 
             status="OPEN",
             outgoing_superintendent_id=user_admin.id,
             incoming_superintendent_id=user_demo.id,
+            shift_date=start_of_shift.date(), 
+            shift_designator=ShiftDesignator.SHIFT_1.value
         )
         session.add(shift)
         session.commit()
