@@ -4,7 +4,11 @@ from sqlmodel import SQLModel
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine
-from app.routers import equipment, shifts, users, login, personnel, attendance, tank, license, tasks, parameters, maintenance
+from app.routers import (
+    equipment, shifts, users, login, personnel, attendance, 
+    tank, license, tasks, parameters, maintenance,
+    reports
+)    
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine) 
@@ -40,3 +44,4 @@ app.include_router(license.router)
 app.include_router(tasks.router)
 app.include_router(parameters.router)
 app.include_router(maintenance.router)    
+app.include_router(reports.router)    
