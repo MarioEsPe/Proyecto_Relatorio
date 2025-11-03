@@ -14,10 +14,6 @@ import {
   TextField,
   Button,
   Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Container
 } from '@mui/material';
 
@@ -26,10 +22,6 @@ const fetchActiveShift = async () => {
   return data; 
 };
 
-const fetchShiftGroups = async () => {
-  const { data } = await api.get('/personnel/groups/');
-  return data;
-};
 
 const performHandover = async (handoverData) => {
   const { data } = await api.post('/shifts/handover', handoverData);
@@ -45,7 +37,6 @@ const HandoverPage = () => {
     outgoing_superintendent_password: '',
     incoming_superintendent_username: '',
     incoming_superintendent_password: '',
-    next_scheduled_group_id: ''
   });
 
   const { 
@@ -58,18 +49,9 @@ const HandoverPage = () => {
     retry: 1
   });
 
-  const { 
-    data: groups, 
-    isLoading: isLoadingGroups 
-  } = useQuery({
-    queryKey: ['shiftGroups'],
-    queryFn: fetchShiftGroups
-  });
-
   const handoverMutation = useMutation({
     mutationFn: performHandover,
     onSuccess: () => {
-
       logout();
       navigate('/login');
     },
@@ -87,7 +69,7 @@ const HandoverPage = () => {
     });
   };
 
-  if (isLoadingShift || isLoadingGroups) {
+  if (isLoadingShift) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
         <CircularProgress />
@@ -161,23 +143,6 @@ const HandoverPage = () => {
                 required
               />
             </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth required>
-                <InputLabel id="group-select-label">Next Scheduled Group</InputLabel>
-                <Select
-                  labelId="group-select-label"
-                  name="next_scheduled_group_id"
-                  value={formState.next_scheduled_group_id}
-                  label="Next Scheduled Group"
-                  onChange={handleFormChange}
-                >
-                  {groups?.map(group => (
-                    <MenuItem key={group.id} value={group.id}>{group.name}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
             {/* --- Submit --- */}
             <Grid item xs={12}>
               <Button
