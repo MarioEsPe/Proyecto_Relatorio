@@ -187,10 +187,12 @@ class ShiftHandoverRequest(SQLModel):
     shift_to_close_id: int
     incoming_superintendent_username: str
     incoming_superintendent_password: str
-    next_scheduled_group_id: int
     outgoing_superintendent_password: str
           
 # 2.2 ShiftAttendance
+class ShiftAssignGroupRequest(SQLModel):
+    group_id: int
+
 class ShiftAttendanceRead(SQLModel):
     id: int
     attendance_status: str

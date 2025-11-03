@@ -17,7 +17,7 @@ from app.schemas import (
     TankReadingRead, TankReadingCreate, TaskLogCreate, TaskLogReadWithDetails,
     NoveltyLogCreate, NoveltyLogReadWithUser, GenerationRampCreate, GenerationRampReadWithUser,
     OperationalReadingCreate, OperationalReadingReadWithDetails,
-    ShiftHandoverRequest
+    ShiftHandoverRequest, ShiftAssignGroupRequest
 )     
 from app.routers.login import get_current_user
 from app.dependencies import require_role, UserRole
@@ -27,6 +27,7 @@ from app.enums import ShiftDesignator
 router = APIRouter(prefix="/shifts", tags=["Shifts"])
 SessionDep = Annotated[Session, Depends(get_session)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
+SuperintendentUser = Annotated[User, Depends(require_role([UserRole.SHIFT_SUPERINTENDENT]))]
 
 @router.get(
     "/active/me",
@@ -80,7 +81,7 @@ def handover_shift(
     *,
     session:SessionDep,
     handover_data: ShiftHandoverRequest,
-    current_user: Annotated[User, Depends(get_current_user)]
+    current_user: SuperintendentUser
 ):
     """
     Performs the atomic shift handover ("digital handshake").
@@ -89,7 +90,7 @@ def handover_shift(
     2. Validates the credentials of the Incoming Superintendent (can be the same user).
     3. Closes the old shift.
     4. Calculates the next shift date and designator (T1, T2, T3).
-    5. Opens a new shift for the incoming user and generates their attendance sheet.
+    5. Opens a new shift for the incoming user.
     All in a single transaction.
     """
     if not verify_password(handover_data.outgoing_superintendent_password,current_user.hashed_password):
@@ -151,7 +152,7 @@ def handover_shift(
             start_time=shift_to_close.end_time, 
             status="OPEN",
             incoming_superintendent_id=user_b.id, 
-            scheduled_group_id=new_group.id,
+            scheduled_group_id= None,
             shift_date=new_shift_date,               
             shift_designator=new_designator_enum.value
         )
@@ -159,19 +160,7 @@ def handover_shift(
         session.commit() 
         
         session.refresh(new_shift)
-        for member in new_group.members:
-            attendance_record = ShiftAttendance(
-                shift_id=new_shift.id,
-                scheduled_employee_id=member.id,
-                actual_employee_id=member.id,
-                attendance_status="Present",
-                position_id=member.base_position_id
-            )
-            session.add(attendance_record)
             
-        session.commit()
-        session.refresh(new_shift)
-    
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=f"Transaction failed: {e}")
@@ -202,6 +191,71 @@ def read_shift(shift_id: int, session: SessionDep) -> Shift:
     if not shift:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift not found")
     return shift
+
+@router.post(
+    "/{shift_id}/assign-group",
+    response_model=List[ShiftAttendanceReadWithDetails],
+    summary="Assign a group to an active shift and generate attendance"
+)
+def assign_group_to_shift(
+    *,
+    session: SessionDep,
+    shift_id: int,
+    request_data: ShiftAssignGroupRequest,
+    current_user: SuperintendentUser
+):
+    """
+    Assigns a ShiftGroup to an active shift.
+    This generates the ShiftAttendance sheet for the shift
+    and is the responsibility of the active superintendent.
+    """
+    
+    db_shift = session.get(Shift, shift_id)
+    if not db_shift:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift not found")
+    if db_shift.status != "OPEN":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Shift is already closed")
+    if db_shift.incoming_superintendent_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized to modify this shift")
+    if db_shift.scheduled_group_id is not None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A group has already been assigned to this shift")
+
+    new_group = session.get(ShiftGroup, request_data.group_id)
+    if not new_group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scheduled group not found")
+
+    try:
+        attendance_records_to_add = []
+        for member in new_group.members:
+            if not member.base_position_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Employee '{member.full_name}' in group '{new_group.name}' does not have a base position assigned."
+                )
+            
+            attendance_record = ShiftAttendance(
+                shift_id=db_shift.id,
+                scheduled_employee_id=member.id,
+                actual_employee_id=member.id,
+                attendance_status="Present",
+                position_id=member.base_position_id
+            )
+            attendance_records_to_add.append(attendance_record)
+
+        db_shift.scheduled_group_id = new_group.id
+        session.add(db_shift)
+        session.add_all(attendance_records_to_add)
+        session.commit()
+
+        session.refresh(db_shift)
+        return db_shift.attendance_records
+
+    except HTTPException as http_exc:
+        session.rollback() 
+        raise http_exc
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {e}")
 
 @router.post("/{shift_id}/equipment-status/", response_model=StatusLogRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role([UserRole.OPS_MANAGER, UserRole.SHIFT_SUPERINTENDENT]))])
 def log_equipment_status_for_shift(
