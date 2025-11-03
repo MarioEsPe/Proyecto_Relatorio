@@ -84,23 +84,42 @@ def seed_database():
 
         positions = [Position(**data) for data in POSITIONS_DATA]
         equipment = [Equipment(**data) for data in EQUIPMENT_DATA]
-        employees = [Employee(**data) for data in EMPLOYEES_DATA]
-        session.add_all(positions + equipment + employees)
+        session.add_all(positions + equipment)
         session.commit()
         
-        start_of_shift = datetime.now(timezone.utc) - timedelta(hours=4)
+        print("Created positions and equipment.")
+
+        for p in positions:
+            session.refresh(p) 
+
+        if len(positions) < 3:
+            raise Exception("Seed data error: Need at least 3 positions for the 3 employees.")
+
+        employees_data_with_pos = [
+            {"full_name": "John Doe", "rpe": "EMP001", "employee_type": EmployeeType.PERMANENT, "base_position_id": positions[0].id},
+            {"full_name": "Jane Smith", "rpe": "EMP002", "employee_type": EmployeeType.PERMANENT, "base_position_id": positions[1].id},
+            {"full_name": "Mike Williams", "rpe": "EMP003", "employee_type": EmployeeType.TEMPORARY, "base_position_id": positions[2].id},
+        ]
+        employees = [Employee(**data) for data in employees_data_with_pos]
+        session.add_all(employees)
+        session.commit()
+        print("Created employees with position assignments.")
         
+        start_of_shift = datetime.now(timezone.utc) - timedelta(hours=4)
         shift = Shift(
             start_time=start_of_shift, 
             status="OPEN",
             outgoing_superintendent_id=user_admin.id,
             incoming_superintendent_id=user_demo.id,
             shift_date=start_of_shift.date(), 
-            shift_designator=ShiftDesignator.SHIFT_1.value
+            shift_designator=ShiftDesignator.SHIFT_1.value,
+            scheduled_group_id=None
         )
         session.add(shift)
         session.commit()
+        print("Created initial open shift (no group assigned).")
 
+        session.refresh(shift)
         event = EventLog(
             timestamp=datetime.now(timezone.utc) - timedelta(hours=2), 
             description="Unit 1 went out of service due to a high furnace pressure protection trip.",
@@ -116,6 +135,7 @@ def seed_database():
         )
         session.add_all([event, novelty])
         session.commit()
+        print("Created initial logs.")
 
         print("Seeding completed successfully!")
 
