@@ -121,7 +121,7 @@ def handover_shift(
         raise HTTPException(status_code=404, detail="Scheduled group not found")
 
     new_shift_date: date
-    new_shift_designator: ShiftDesignator
+    new_designator_enum: ShiftDesignator
 
     if not shift_to_close.shift_designator or not shift_to_close.shift_date:
         current_date = shift_to_close.start_time.date()
@@ -135,10 +135,10 @@ def handover_shift(
         current_designator_enum = ShiftDesignator(shift_to_close.shift_designator)
 
     if current_designator_enum == ShiftDesignator.SHIFT_3:
-        new_shift_designator_enum = ShiftDesignator.SHIFT_1
+        new_designator_enum = ShiftDesignator.SHIFT_1
         new_shift_date = current_date + timedelta(days=1)
     else:
-        new_shift_designator_enum = ShiftDesignator(current_designator_enum.value + 1)
+        new_designator_enum = ShiftDesignator(current_designator_enum.value + 1)
         new_shift_date = current_date
 
     try:
@@ -153,7 +153,7 @@ def handover_shift(
             incoming_superintendent_id=user_b.id, 
             scheduled_group_id=new_group.id,
             shift_date=new_shift_date,               
-            shift_designator=new_shift_designator.value
+            shift_designator=new_designator_enum.value
         )
         session.add(new_shift)
         session.commit() 
