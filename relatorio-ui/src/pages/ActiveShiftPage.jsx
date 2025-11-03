@@ -13,6 +13,7 @@ import MaintenanceTicketPanel from '../components/MaintenanceTicketPanel';
 import LicensePanel from '../components/LicensePanel';
 import GenerationRampPanel from '../components/GenerationRampPanel';
 import AttendancePanel from '../components/AttendancePanel';
+import AssignGroupPanel from '../components/AssignGroupPanel';
 
 import { 
   Box, 
@@ -134,7 +135,14 @@ const ActiveShiftPage = () => {
       </Typography>
 
       <Grid container spacing={3} sx={{ mt: 2 }}>
-        
+        <Grid item xs={12}>
+          {activeShift.scheduled_group_id === null ? (
+            <AssignGroupPanel shiftId={activeShift.id} />
+          ) : (
+            <AttendancePanel shiftId={activeShift.id} />
+          )}
+        </Grid>
+
         {/* Columna de Eventos */}
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 2, minHeight: 300 }}>
@@ -238,13 +246,6 @@ const ActiveShiftPage = () => {
             activeShiftData={activeShift} 
           />
         </Grid>
-
-        <Grid item xs={12}>
-          <AttendancePanel 
-            shiftId={activeShift.id} 
-          />
-        </Grid>
-
       </Grid>
     </Box>
   );
